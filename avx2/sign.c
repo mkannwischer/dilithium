@@ -250,11 +250,11 @@ int DILITHIUM_crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
                                   nonce + 4, nonce + 5, nonce + 6, nonce + 7);
     DILITHIUM_poly_uniform_eta(&s2.vec[4], rhoprime, nonce + 8);
 #elif L == 5 && K == 6
-    poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3], rhoprime,
+    DILITHIUM_poly_uniform_eta_4x(&s1.vec[0], &s1.vec[1], &s1.vec[2], &s1.vec[3], rhoprime,
                         nonce, nonce + 1, nonce + 2, nonce + 3);
-    poly_uniform_eta_4x(&s1.vec[4], &s2.vec[0], &s2.vec[1], &s2.vec[2], rhoprime,
+    DILITHIUM_poly_uniform_eta_4x(&s1.vec[4], &s2.vec[0], &s2.vec[1], &s2.vec[2], rhoprime,
                         nonce + 4, nonce + 5, nonce + 6, nonce + 7);
-    poly_uniform_eta_4x(&s2.vec[3], &s2.vec[4], &s2.vec[5], &t.vec[0], rhoprime,
+    DILITHIUM_poly_uniform_eta_4x(&s2.vec[3], &s2.vec[4], &s2.vec[5], &t.vec[0], rhoprime,
                         nonce + 8, nonce + 9, nonce + 10, 0);
 #else
 #error ""

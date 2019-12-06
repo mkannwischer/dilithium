@@ -1,8 +1,9 @@
 #include <stdint.h>
+
+#include "ntt.h"
 #include "params.h"
 #include "poly.h"
 #include "polyvec.h"
-#include "ntt.h"
 
 /**************************************************************/
 /************ Vectors of polynomials of length L **************/
@@ -90,9 +91,11 @@ void DILITHIUM_polyvecl_pointwise_acc_invmontgomery(poly *w,
 int DILITHIUM_polyvecl_chknorm(const polyvecl *v, uint32_t bound)  {
   unsigned int i;
 
-  for(i = 0; i < L; ++i)
-    if(DILITHIUM_poly_chknorm(&v->vec[i], bound))
+  for(i = 0; i < L; ++i) {
+    if(DILITHIUM_poly_chknorm(&v->vec[i], bound)) {
       return 1;
+    }
+  }
 
   return 0;
 }
@@ -324,12 +327,12 @@ unsigned int DILITHIUM_polyveck_make_hint(polyveck *h,
 *
 * Arguments:   - polyveck *w: pointer to output vector of polynomials with
 *                             corrected high bits
-*              - const polyveck *u: pointer to input vector
+*              - const polyveck *v: pointer to input vector
 *              - const polyveck *h: pointer to input hint vector
 **************************************************/
-void DILITHIUM_polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
+void DILITHIUM_polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-      DILITHIUM_poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
+      DILITHIUM_poly_use_hint(&w->vec[i], &v->vec[i], &h->vec[i]);
 }

@@ -147,6 +147,28 @@ SCHEMES = {
             'USE_AES',
         ],
     },
+    'dilithium4 ': {
+        'src': 'avx2',
+        'dst': 'avx2',
+        'defs': {
+            'MODE': '4',
+        },
+        'undefs': [
+            'NIST_COMPATIBLE',
+            'USE_AES',
+        ],
+    },
+    'dilithium2 ': {
+        'src': 'avx2',
+        'dst': 'avx2',
+        'defs': {
+            'MODE': '2',
+        },
+        'undefs': [
+            'NIST_COMPATIBLE',
+            'USE_AES',
+        ],
+    },
 }
 
 for name, options in SCHEMES.items():
@@ -184,6 +206,7 @@ for name, options in SCHEMES.items():
         '-iquote', os.path.join(PQCLEAN_PATH, 'common'),
         '-iquote', implpath,
     ], capture_output=True)
+
     srcs = [os.path.join(implpath, file)
             for file in files[options['src']]
             if file[-2:] in ('.c', '.h')]

@@ -1,6 +1,7 @@
 #include <immintrin.h>
 #include <stdint.h>
 
+#include "fips202x4.h"
 #include "ntt.h"
 #include "nttconsts.h"
 #include "params.h"
@@ -9,7 +10,6 @@
 #include "rejsample.h"
 #include "rounding.h"
 #include "symmetric.h"
-#include "fips202x4.h"
 
 /*************************************************
 * Name:        DILITHIUM_poly_reduce
@@ -615,7 +615,7 @@ void DILITHIUM_poly_uniform_gamma1m1(poly *a,
   stream256_state state;
 
   stream256_init(&state, seed, nonce);
-  stream256_squeezeblocks(buf, POLY_UNIFORM_ETA_NBLOCKS, &state);
+  stream256_squeezeblocks(buf, POLY_UNIFORM_GAMMA1M1_NBLOCKS, &state);
 
   ctr = DILITHIUM_rej_gamma1m1(a->coeffs, N, buf, POLY_UNIFORM_GAMMA1M1_BUFLEN);
 
@@ -741,10 +741,10 @@ void DILITHIUM_polyeta_unpack(poly * restrict r, const unsigned char * restrict 
   for(i = 0; i < N/8; ++i) {
     r->coeffs[8*i+0] = a[3*i+0] & 0x07;
     r->coeffs[8*i+1] = (a[3*i+0] >> 3) & 0x07;
-    r->coeffs[8*i+2] = ((a[3*i+0] >> 6) | (a[3*i+1] << 2)) & 0x07;
+    r->coeffs[8*i+2] = (uint32_t)((a[3*i+0] >> 6) | (a[3*i+1] << 2)) & 0x07;
     r->coeffs[8*i+3] = (a[3*i+1] >> 1) & 0x07;
     r->coeffs[8*i+4] = (a[3*i+1] >> 4) & 0x07;
-    r->coeffs[8*i+5] = ((a[3*i+1] >> 7) | (a[3*i+2] << 1)) & 0x07;
+    r->coeffs[8*i+5] = (uint32_t)((a[3*i+1] >> 7) | (a[3*i+2] << 1)) & 0x07;
     r->coeffs[8*i+6] = (a[3*i+2] >> 2) & 0x07;
     r->coeffs[8*i+7] = (a[3*i+2] >> 5) & 0x07;
 
@@ -781,15 +781,15 @@ void DILITHIUM_polyt1_pack(unsigned char * restrict r, const poly * restrict a) 
   unsigned int i;
 
   for(i = 0; i < N/8; ++i) {
-    r[9*i+0]  = (a->coeffs[8*i+0] >> 0);
-    r[9*i+1]  = (a->coeffs[8*i+0] >> 8) | (a->coeffs[8*i+1] << 1);
-    r[9*i+2]  = (a->coeffs[8*i+1] >> 7) | (a->coeffs[8*i+2] << 2);
-    r[9*i+3]  = (a->coeffs[8*i+2] >> 6) | (a->coeffs[8*i+3] << 3);
-    r[9*i+4]  = (a->coeffs[8*i+3] >> 5) | (a->coeffs[8*i+4] << 4);
-    r[9*i+5]  = (a->coeffs[8*i+4] >> 4) | (a->coeffs[8*i+5] << 5);
-    r[9*i+6]  = (a->coeffs[8*i+5] >> 3) | (a->coeffs[8*i+6] << 6);
-    r[9*i+7]  = (a->coeffs[8*i+6] >> 2) | (a->coeffs[8*i+7] << 7);
-    r[9*i+8]  = (a->coeffs[8*i+7] >> 1);
+    r[9*i+0]  = (uint8_t)((a->coeffs[8*i+0] >> 0));
+    r[9*i+1]  = (uint8_t)((a->coeffs[8*i+0] >> 8) | (a->coeffs[8*i+1] << 1));
+    r[9*i+2]  = (uint8_t)((a->coeffs[8*i+1] >> 7) | (a->coeffs[8*i+2] << 2));
+    r[9*i+3]  = (uint8_t)((a->coeffs[8*i+2] >> 6) | (a->coeffs[8*i+3] << 3));
+    r[9*i+4]  = (uint8_t)((a->coeffs[8*i+3] >> 5) | (a->coeffs[8*i+4] << 4));
+    r[9*i+5]  = (uint8_t)((a->coeffs[8*i+4] >> 4) | (a->coeffs[8*i+5] << 5));
+    r[9*i+6]  = (uint8_t)((a->coeffs[8*i+5] >> 3) | (a->coeffs[8*i+6] << 6));
+    r[9*i+7]  = (uint8_t)((a->coeffs[8*i+6] >> 2) | (a->coeffs[8*i+7] << 7));
+    r[9*i+8]  = (uint8_t)((a->coeffs[8*i+7] >> 1));
   }
 }
 

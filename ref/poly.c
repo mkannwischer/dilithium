@@ -515,10 +515,10 @@ void DILITHIUM_polyeta_unpack(poly *r, const uint8_t *a) {
     for(i = 0; i < N/8; ++i) {
       r->coeffs[8*i+0] = a[3*i+0] & 0x07;
       r->coeffs[8*i+1] = (a[3*i+0] >> 3) & 0x07;
-      r->coeffs[8*i+2] = ((a[3*i+0] >> 6) | (a[3*i+1] << 2)) & 0x07;
+      r->coeffs[8*i+2] = (uint32_t)((a[3*i+0] >> 6) | (a[3*i+1] << 2)) & 0x07;
       r->coeffs[8*i+3] = (a[3*i+1] >> 1) & 0x07;
       r->coeffs[8*i+4] = (a[3*i+1] >> 4) & 0x07;
-      r->coeffs[8*i+5] = ((a[3*i+1] >> 7) | (a[3*i+2] << 1)) & 0x07;
+      r->coeffs[8*i+5] = (uint32_t)((a[3*i+1] >> 7) | (a[3*i+2] << 1)) & 0x07;
       r->coeffs[8*i+6] = (a[3*i+2] >> 2) & 0x07;
       r->coeffs[8*i+7] = (a[3*i+2] >> 5) & 0x07;
 

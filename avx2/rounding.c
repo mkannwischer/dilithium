@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "rounding.h"
 
 /*************************************************
@@ -41,9 +40,6 @@ uint32_t DILITHIUM_power2round(uint32_t a, uint32_t *a0)  {
 * Returns a1.
 **************************************************/
 uint32_t DILITHIUM_decompose(uint32_t a, uint32_t *a0) {
-#if ALPHA != (Q-1)/16
-#error "decompose assumes ALPHA == (Q-1)/16"
-#endif
     int32_t t, u;
 
     /* Centralized remainder mod ALPHA */

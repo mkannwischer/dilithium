@@ -12,9 +12,10 @@
 *              - const uint8_t rho[]: byte array containing rho
 *              - const polyveck *t1: pointer to vector t1
 **************************************************/
-void DILITHIUM_pack_pk(uint8_t *pk,
-                       const uint8_t *rho,
-                       const polyveck *t1)
+void DILITHIUM_pack_pk(
+        uint8_t *pk,
+        const uint8_t *rho,
+        const polyveck *t1)
 {
   unsigned int i;
 
@@ -35,9 +36,10 @@ void DILITHIUM_pack_pk(uint8_t *pk,
 *              - const polyveck *t1: pointer to output vector t1
 *              - uint8_t pk[]: byte array containing bit-packed pk
 **************************************************/
-void DILITHIUM_unpack_pk(uint8_t *rho,
-                         polyveck *t1,
-                         const uint8_t *pk)
+void DILITHIUM_unpack_pk(
+        uint8_t *rho,
+        polyveck *t1,
+        const uint8_t *pk)
 {
   unsigned int i;
 
@@ -62,15 +64,16 @@ void DILITHIUM_unpack_pk(uint8_t *rho,
 *              - const polyveck *s2: pointer to vector s2
 *              - const polyveck *t0: pointer to vector t0
 **************************************************/
-void DILITHIUM_pack_sk(uint8_t *sk,
-                       const uint8_t *rho,
-                       const uint8_t *key,
-                       const uint8_t *tr,
-                       const polyvecl *s1,
-                       const polyveck *s2,
-                       const polyveck *t0)
+void DILITHIUM_pack_sk(
+        uint8_t *sk,
+        const uint8_t *rho,
+        const uint8_t *key,
+        const uint8_t *tr,
+        const polyvecl *s1,
+        const polyveck *s2,
+        const polyveck *t0)
 {
-  unsigned int i;
+    unsigned int i;
 
   for(i = 0; i < SEEDBYTES; ++i)
     sk[i] = rho[i];
@@ -109,13 +112,14 @@ void DILITHIUM_pack_sk(uint8_t *sk,
 *              - const polyveck *r0: pointer to output vector t0
 *              - uint8_t sk[]: byte array containing bit-packed sk
 **************************************************/
-void DILITHIUM_unpack_sk(uint8_t *rho,
-                         uint8_t *key,
-                         uint8_t *tr,
-                         polyvecl *s1,
-                         polyveck *s2,
-                         polyveck *t0,
-                         const uint8_t *sk)
+void DILITHIUM_unpack_sk(
+        uint8_t *rho,
+        uint8_t *key,
+        uint8_t *tr,
+        polyvecl *s1,
+        polyveck *s2,
+        polyveck *t0,
+        const uint8_t *sk)
 {
   unsigned int i;
 
@@ -153,10 +157,11 @@ void DILITHIUM_unpack_sk(uint8_t *rho,
 *              - const polyveck *h: pointer to hint vector h
 *              - const poly *c: pointer to DILITHIUM_challenge polynomial
 **************************************************/
-void DILITHIUM_pack_sig(uint8_t *sig,
-                        const polyvecl *z,
-                        const polyveck *h,
-                        const poly *c)
+void DILITHIUM_pack_sig(
+        uint8_t *sig,
+        const polyvecl *z,
+        const polyveck *h,
+        const poly *c)
 {
   unsigned int i, j, k;
   uint64_t signs, mask;
@@ -210,10 +215,11 @@ void DILITHIUM_pack_sig(uint8_t *sig,
 *
 * Returns 1 in case of malformed signature; otherwise 0.
 **************************************************/
-int DILITHIUM_unpack_sig(polyvecl *z,
-                         polyveck *h,
-                         poly *c,
-                         const uint8_t *sig)
+int DILITHIUM_unpack_sig(
+        polyvecl *z,
+        polyveck *h,
+        poly *c,
+        const uint8_t *sig)
 {
   unsigned int i, j, k;
   uint64_t signs;
