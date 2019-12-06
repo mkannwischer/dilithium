@@ -2,26 +2,25 @@
 #define NTT_H
 
 #include <stdint.h>
+
 #include "params.h"
+#include "nttconsts.h"
 
-extern const uint32_t zetas[N];
-extern const uint32_t zetas_inv[N];
+void DILITHIUM_ntt_levels0t2_avx(uint64_t *tmp,
+                                 const uint32_t *a,
+                                 const uint32_t *zetas);
+void DILITHIUM_ntt_levels3t8_avx(uint32_t *a,
+                                 const uint64_t *tmp,
+                                 const uint32_t *zetas);
 
-void ntt_levels0t2_avx(uint64_t tmp[N],
-                       const uint32_t a[N],
-                       const uint32_t zetas[7]);
-void ntt_levels3t8_avx(uint32_t a[N],
-                       const uint64_t tmp[N],
-                       const uint32_t zetas[31]);
+void DILITHIUM_invntt_levels0t4_avx(uint64_t *tmp,
+                                    const uint32_t *a,
+                                    const uint32_t *zetas_inv);
+void DILITHIUM_invntt_levels5t7_avx(uint32_t *a,
+                                    const uint64_t *tmp,
+                                    const uint32_t *zetas_inv);
 
-void invntt_levels0t4_avx(uint64_t tmp[N],
-                          const uint32_t a[N],
-                          const uint32_t zetas_inv[31]);
-void invntt_levels5t7_avx(uint32_t a[N],
-                          const uint64_t tmp[N],
-                          const uint32_t zetas_inv[7]);
-
-void pointwise_avx(uint32_t c[N], const uint32_t a[N], const uint32_t b[N]);
-void pointwise_acc_avx(uint32_t c[N], const uint32_t *a, const uint32_t *b);
+void DILITHIUM_pointwise_avx(uint32_t *c, const uint32_t *a, const uint32_t *b);
+void DILITHIUM_pointwise_acc_avx(uint32_t *c, const uint32_t *a, const uint32_t *b);
 
 #endif

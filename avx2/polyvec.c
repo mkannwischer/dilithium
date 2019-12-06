@@ -9,22 +9,22 @@
 /**************************************************************/
 
 /*************************************************
-* Name:        polyvecl_freeze
+* Name:        DILITHIUM_polyvecl_freeze
 *
 * Description: Reduce coefficients of polynomials in vector of length L
 *              to standard representatives.
 *
 * Arguments:   - polyvecl *v: pointer to input/output vector
 **************************************************/
-void polyvecl_freeze(polyvecl *v) {
+void DILITHIUM_polyvecl_freeze(polyvecl *v) {
   unsigned int i;
 
   for(i = 0; i < L; ++i)
-    poly_freeze(&v->vec[i]);
+      DILITHIUM_poly_freeze(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyvecl_add
+* Name:        DILITHIUM_polyvecl_add
 *
 * Description: Add vectors of polynomials of length L.
 *              No modular reduction is performed.
@@ -33,30 +33,30 @@ void polyvecl_freeze(polyvecl *v) {
 *              - const polyvecl *u: pointer to first summand
 *              - const polyvecl *v: pointer to second summand
 **************************************************/
-void polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
+void DILITHIUM_polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
   unsigned int i;
 
   for(i = 0; i < L; ++i)
-    poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
+      DILITHIUM_poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyvecl_ntt
+* Name:        DILITHIUM_polyvecl_ntt
 *
 * Description: Forward NTT of all polynomials in vector of length L. Output
 *              coefficients can be up to 16*Q larger than input coefficients.
 *
 * Arguments:   - polyvecl *v: pointer to input/output vector
 **************************************************/
-void polyvecl_ntt(polyvecl *v) {
+void DILITHIUM_polyvecl_ntt(polyvecl *v) {
   unsigned int i;
 
   for(i = 0; i < L; ++i)
-    poly_ntt(&v->vec[i]);
+      DILITHIUM_poly_ntt(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyvecl_pointwise_acc_invmontgomery
+* Name:        DILITHIUM_polyvecl_pointwise_acc_invmontgomery
 *
 * Description: Pointwise multiply vectors of polynomials of length L, multiply
 *              resulting vector by 2^{-32} and add (accumulate) polynomials
@@ -68,15 +68,15 @@ void polyvecl_ntt(polyvecl *v) {
 *              - const polyvecl *u: pointer to first input vector
 *              - const polyvecl *v: pointer to second input vector
 **************************************************/
-void polyvecl_pointwise_acc_invmontgomery(poly *w,
+void DILITHIUM_polyvecl_pointwise_acc_invmontgomery(poly *w,
                                           const polyvecl *u,
                                           const polyvecl *v)
 {
-  pointwise_acc_avx(w->coeffs, u->vec->coeffs, v->vec->coeffs);
+    DILITHIUM_pointwise_acc_avx(w->coeffs, u->vec->coeffs, v->vec->coeffs);
 }
 
 /*************************************************
-* Name:        polyvecl_chknorm
+* Name:        DILITHIUM_polyvecl_chknorm
 *
 * Description: Check infinity norm of polynomials in vector of length L.
 *              Assumes input coefficients to be standard representatives.
@@ -87,11 +87,11 @@ void polyvecl_pointwise_acc_invmontgomery(poly *w,
 * Returns 0 if norm of all polynomials is strictly smaller than B and 1
 * otherwise.
 **************************************************/
-int polyvecl_chknorm(const polyvecl *v, uint32_t bound)  {
+int DILITHIUM_polyvecl_chknorm(const polyvecl *v, uint32_t bound)  {
   unsigned int i;
 
   for(i = 0; i < L; ++i)
-    if(poly_chknorm(&v->vec[i], bound))
+    if(DILITHIUM_poly_chknorm(&v->vec[i], bound))
       return 1;
 
   return 0;
@@ -103,33 +103,33 @@ int polyvecl_chknorm(const polyvecl *v, uint32_t bound)  {
 
 
 /*************************************************
-* Name:        polyveck_reduce
+* Name:        DILITHIUM_polyveck_reduce
 *
 * Description: Reduce coefficients of polynomials in vector of length K
 *              to representatives in [0,2*Q[.
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_reduce(polyveck *v) {
+void DILITHIUM_polyveck_reduce(polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_reduce(&v->vec[i]);
+      DILITHIUM_poly_reduce(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_csubq
+* Name:        DILITHIUM_polyveck_csubq
 *
 * Description: For all coefficients of polynomials in vector of length K
 *              subtract Q if coefficient is bigger than Q.
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_csubq(polyveck *v) {
+void DILITHIUM_polyveck_csubq(polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_csubq(&v->vec[i]);
+      DILITHIUM_poly_csubq(&v->vec[i]);
 }
 
 /*************************************************
@@ -140,15 +140,15 @@ void polyveck_csubq(polyveck *v) {
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_freeze(polyveck *v)  {
+void DILITHIUM_polyveck_freeze(polyveck *v)  {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_freeze(&v->vec[i]);
+      DILITHIUM_poly_freeze(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_add
+* Name:        DILITHIUM_polyveck_add
 *
 * Description: Add vectors of polynomials of length K.
 *              No modular reduction is performed.
@@ -157,15 +157,15 @@ void polyveck_freeze(polyveck *v)  {
 *              - const polyveck *u: pointer to first summand
 *              - const polyveck *v: pointer to second summand
 **************************************************/
-void polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
+void DILITHIUM_polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
+      DILITHIUM_poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_sub
+* Name:        DILITHIUM_polyveck_sub
 *
 * Description: Subtract vectors of polynomials of length K.
 *              Assumes coefficients of polynomials in second input vector
@@ -176,45 +176,45 @@ void polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
 *              - const polyveck *v: pointer to second input vector to be
 *                                   subtracted from first input vector
 **************************************************/
-void polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
+void DILITHIUM_polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_sub(&w->vec[i], &u->vec[i], &v->vec[i]);
+      DILITHIUM_poly_sub(&w->vec[i], &u->vec[i], &v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_shiftl
+* Name:        DILITHIUM_polyveck_shiftl
 *
 * Description: Multiply vector of polynomials of Length K by 2^D without modular
 *              reduction. Assumes input coefficients to be less than 2^{32-D}.
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_shiftl(polyveck *v) {
+void DILITHIUM_polyveck_shiftl(polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_shiftl(&v->vec[i]);
+      DILITHIUM_poly_shiftl(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_ntt
+* Name:        DILITHIUM_polyveck_ntt
 *
 * Description: Forward NTT of all polynomials in vector of length K. Output
 *              coefficients can be up to 16*Q larger than input coefficients.
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_ntt(polyveck *v) {
+void DILITHIUM_polyveck_ntt(polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_ntt(&v->vec[i]);
+      DILITHIUM_poly_ntt(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_invntt_montgomery
+* Name:        DILITHIUM_polyveck_invntt_montgomery
 *
 * Description: Inverse NTT and multiplication by 2^{32} of polynomials
 *              in vector of length K. Input coefficients need to be less
@@ -222,15 +222,15 @@ void polyveck_ntt(polyveck *v) {
 *
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
-void polyveck_invntt_montgomery(polyveck *v) {
+void DILITHIUM_polyveck_invntt_montgomery(polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_invntt_montgomery(&v->vec[i]);
+      DILITHIUM_poly_invntt_montgomery(&v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_chknorm
+* Name:        DILITHIUM_polyveck_chknorm
 *
 * Description: Check infinity norm of polynomials in vector of length K.
 *              Assumes input coefficients to be standard representatives.
@@ -241,18 +241,18 @@ void polyveck_invntt_montgomery(polyveck *v) {
 * Returns 0 if norm of all polynomials are strictly smaller than B and 1
 * otherwise.
 **************************************************/
-int polyveck_chknorm(const polyveck *v, uint32_t bound) {
+int DILITHIUM_polyveck_chknorm(const polyveck *v, uint32_t bound) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    if(poly_chknorm(&v->vec[i], bound))
+    if(DILITHIUM_poly_chknorm(&v->vec[i], bound))
       return 1;
 
   return 0;
 }
 
 /*************************************************
-* Name:        polyveck_power2round
+* Name:        DILITHIUM_polyveck_power2round
 *
 * Description: For all coefficients a of polynomials in vector of length K,
 *              compute a0, a1 such that a mod Q = a1*2^D + a0
@@ -265,15 +265,15 @@ int polyveck_chknorm(const polyveck *v, uint32_t bound) {
 *                              coefficients Q + a0
 *              - const polyveck *v: pointer to input vector
 **************************************************/
-void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
+void DILITHIUM_polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_power2round(&v1->vec[i], &v0->vec[i], &v->vec[i]);
+      DILITHIUM_poly_power2round(&v1->vec[i], &v0->vec[i], &v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_decompose
+* Name:        DILITHIUM_polyveck_decompose
 *
 * Description: For all coefficients a of polynomials in vector of length K,
 *              compute high and low bits a0, a1 such a mod Q = a1*ALPHA + a0
@@ -287,15 +287,15 @@ void polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
 *                              coefficients Q + a0
 *              - const polyveck *v: pointer to input vector
 **************************************************/
-void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
+void DILITHIUM_polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_decompose(&v1->vec[i], &v0->vec[i], &v->vec[i]);
+      DILITHIUM_poly_decompose(&v1->vec[i], &v0->vec[i], &v->vec[i]);
 }
 
 /*************************************************
-* Name:        polyveck_make_hint
+* Name:        DILITHIUM_polyveck_make_hint
 *
 * Description: Compute hint vector.
 *
@@ -305,14 +305,14 @@ void polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
 *
 * Returns number of 1 bits.
 **************************************************/
-unsigned int polyveck_make_hint(polyveck *h,
+unsigned int DILITHIUM_polyveck_make_hint(polyveck *h,
                                 const polyveck *v0,
                                 const polyveck *v1)
 {
   unsigned int i, s = 0;
 
   for(i = 0; i < K; ++i)
-    s += poly_make_hint(&h->vec[i], &v0->vec[i], &v1->vec[i]);
+    s += DILITHIUM_poly_make_hint(&h->vec[i], &v0->vec[i], &v1->vec[i]);
 
   return s;
 }
@@ -327,9 +327,9 @@ unsigned int polyveck_make_hint(polyveck *h,
 *              - const polyveck *u: pointer to input vector
 *              - const polyveck *h: pointer to input hint vector
 **************************************************/
-void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
+void DILITHIUM_polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
   unsigned int i;
 
   for(i = 0; i < K; ++i)
-    poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
+      DILITHIUM_poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
 }

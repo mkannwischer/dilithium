@@ -1,8 +1,10 @@
 #include <stdint.h>
+
 #include "params.h"
+#include "rounding.h"
 
 /*************************************************
-* Name:        power2round
+* Name:        DILITHIUM_power2round
 *
 * Description: For finite field element a, compute a0, a1 such that
 *              a mod Q = a1*2^D + a0 with -2^{D-1} < a0 <= 2^{D-1}.
@@ -13,21 +15,21 @@
 *
 * Returns a1.
 **************************************************/
-uint32_t power2round(uint32_t a, uint32_t *a0)  {
-  int32_t t;
+uint32_t DILITHIUM_power2round(uint32_t a, uint32_t *a0)  {
+  uint32_t t;
 
   /* Centralized remainder mod 2^D */
   t = a & ((1U << D) - 1);
-  t -= (1U << (D-1)) + 1;
-  t += (t >> 31) & (1U << D);
-  t -= (1U << (D-1)) - 1;
+  t -= (1U << (D - 1)) + 1;
+  t += ((uint32_t)((int32_t)t >> 31) & (1 << D));
+  t -= (1U << (D - 1)) - 1;
   *a0 = Q + t;
   a = (a - t) >> D;
   return a;
 }
 
 /*************************************************
-* Name:        decompose
+* Name:        DILITHIUM_decompose
 *
 * Description: For finite field element a, compute high and low bits a0, a1 such
 *              that a mod Q = a1*ALPHA + a0 with -ALPHA/2 < a0 <= ALPHA/2 except
@@ -40,34 +42,34 @@ uint32_t power2round(uint32_t a, uint32_t *a0)  {
 *
 * Returns a1.
 **************************************************/
-uint32_t decompose(uint32_t a, uint32_t *a0) {
+uint32_t DILITHIUM_decompose(uint32_t a, uint32_t *a0) {
 #if ALPHA != (Q-1)/16
-#error "decompose assumes ALPHA == (Q-1)/16"
+#error "DILITHIUM_decompose assumes ALPHA == (Q-1)/16"
 #endif
   int32_t t, u;
 
   /* Centralized remainder mod ALPHA */
-  t = a & 0x7FFFF;
-  t += (a >> 19) << 9;
+  t = a & 0x7FFFFu;
+  t += (int32_t)((a >> 19u) << 9u);
   t -= ALPHA/2 + 1;
   t += (t >> 31) & ALPHA;
   t -= ALPHA/2 - 1;
-  a -= t;
+  a -= (uint32_t)t;
 
   /* Divide by ALPHA (possible to avoid) */
-  u = a - 1;
+  u = (int32_t)(a - 1);
   u >>= 31;
   a = (a >> 19) + 1;
   a -= u & 1;
 
   /* Border case */
-  *a0 = Q + t - (a >> 4);
-  a &= 0xF;
+  *a0 = (uint32_t)(Q + t - (int32_t)(a >> 4u));
+  a &= 0xFu;
   return a;
 }
 
 /*************************************************
-* Name:        make_hint
+* Name:        DILITHIUM_make_hint
 *
 * Description: Compute hint bit indicating whether the low bits of the
 *              input element overflow into the high bits. Inputs assumed to be
@@ -78,7 +80,7 @@ uint32_t decompose(uint32_t a, uint32_t *a0) {
 *
 * Returns 1 if high bits of a and b differ and 0 otherwise.
 **************************************************/
-unsigned int make_hint(const uint32_t a0, const uint32_t a1) {
+unsigned int DILITHIUM_make_hint(const uint32_t a0, const uint32_t a1) {
   if(a0 <= GAMMA2 || a0 > Q - GAMMA2 || (a0 == Q - GAMMA2 && a1 == 0))
     return 0;
 
@@ -86,7 +88,7 @@ unsigned int make_hint(const uint32_t a0, const uint32_t a1) {
 }
 
 /*************************************************
-* Name:        use_hint
+* Name:        DILITHIUM_use_hint
 *
 * Description: Correct high bits according to hint.
 *
@@ -95,18 +97,18 @@ unsigned int make_hint(const uint32_t a0, const uint32_t a1) {
 *
 * Returns corrected high bits.
 **************************************************/
-uint32_t use_hint(const uint32_t a, const unsigned int hint) {
+uint32_t DILITHIUM_use_hint(const uint32_t a, const unsigned int hint) {
   uint32_t a0, a1;
 
-  a1 = decompose(a, &a0);
+  a1 = DILITHIUM_decompose(a, &a0);
   if(hint == 0)
     return a1;
   else if(a0 > Q)
     return (a1 + 1) & 0xF;
-  else
-    return (a1 - 1) & 0xF;
 
-  /* If decompose does not divide out ALPHA:
+  return (a1 - 1) & 0xF;
+
+  /* If DILITHIUM_decompose does not divide out ALPHA:
   if(hint == 0)
     return a1;
   else if(a0 > Q)

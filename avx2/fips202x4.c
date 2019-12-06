@@ -1,19 +1,14 @@
-#include <stdint.h>
 #include <immintrin.h>
-#include "params.h"
-#include "test/cpucycles.h"
-#include "fips202x4.h"
+#include <stdint.h>
+
 #include "fips202.h"
+#include "fips202x4.h"
+#include "params.h"
 
 #define NROUNDS 24
-#define ROL(a, offset) ((a << offset) ^ (a >> (64-offset)))
+#define ROL(a, offset) (((a) << (offset)) ^ ((a) >> (64 - (offset))))
 
-#ifdef DBENCH
-extern const unsigned long long timing_overhead;
-extern unsigned long long * const tshake;
-#endif
-
-static uint64_t load64(const unsigned char *x) {
+static uint64_t load64(const uint8_t *x) {
   unsigned int i;
   uint64_t r = 0;
 
@@ -23,11 +18,11 @@ static uint64_t load64(const unsigned char *x) {
   return r;
 }
 
-static void store64(unsigned char *x, uint64_t u) {
+static void store64(uint8_t *x, uint64_t u) {
   unsigned int i;
 
   for(i = 0; i < 8; ++i)
-    x[i] = u >> 8*i;
+    x[i] = (uint8_t)(u >> 8*i);
 }
 
 /* Use implementation from the Keccak Code Package */
@@ -36,20 +31,19 @@ extern void KeccakP1600times4_PermuteAll_24rounds(__m256i *s);
 
 static void keccak_absorb4x(__m256i *s,
                             unsigned int r,
-                            const unsigned char *m0,
-                            const unsigned char *m1,
-                            const unsigned char *m2,
-                            const unsigned char *m3,
+                            const uint8_t *m0,
+                            const uint8_t *m1,
+                            const uint8_t *m2,
+                            const uint8_t *m3,
                             unsigned long long mlen,
-                            unsigned char p)
+                            uint8_t p)
 {
   unsigned long long i;
-  unsigned char t0[200];
-  unsigned char t1[200];
-  unsigned char t2[200];
-  unsigned char t3[200];
+  uint8_t t0[200];
+  uint8_t t1[200];
+  uint8_t t2[200];
+  uint8_t t3[200];
   uint64_t *ss = (uint64_t *)s;
-  DBENCH_START();
 
   for(i = 0; i < 25; ++i)
     s[i] = _mm256_xor_si256(s[i], s[i]);
@@ -99,22 +93,19 @@ static void keccak_absorb4x(__m256i *s,
     ss[4*i + 2] ^= load64(t2 + 8*i);
     ss[4*i + 3] ^= load64(t3 + 8*i);
   }
-
-  DBENCH_STOP(*tshake);
 }
 
 
-static void keccak_squeezeblocks4x(unsigned char *h0,
-                                   unsigned char *h1,
-                                   unsigned char *h2,
-                                   unsigned char *h3,
+static void keccak_squeezeblocks4x(uint8_t *h0,
+                                   uint8_t *h1,
+                                   uint8_t *h2,
+                                   uint8_t *h3,
                                    unsigned long nblocks,
                                    unsigned int r,
                                    __m256i *s)
 {
   unsigned int i;
   uint64_t *ss = (uint64_t *)s;
-  DBENCH_START();
 
   while(nblocks > 0) {
     KeccakF1600_StatePermute4x(s);
@@ -132,67 +123,71 @@ static void keccak_squeezeblocks4x(unsigned char *h0,
     --nblocks;
   }
 
-  DBENCH_STOP(*tshake);
 }
 
-void shake128_absorb4x(__m256i *s,
-                       const unsigned char *m0,
-                       const unsigned char *m1,
-                       const unsigned char *m2,
-                       const unsigned char *m3,
-                       unsigned long long mlen)
+void DILITHIUM_shake128_absorb4x(
+        __m256i *s,
+        const uint8_t *m0,
+        const uint8_t *m1,
+        const uint8_t *m2,
+        const uint8_t *m3,
+        unsigned long long mlen)
 {
   keccak_absorb4x(s, SHAKE128_RATE, m0, m1, m2, m3, mlen, 0x1F);
 }
 
-void shake128_squeezeblocks4x(unsigned char *h0,
-                              unsigned char *h1,
-                              unsigned char *h2,
-                              unsigned char *h3,
-                              unsigned long nblocks,
-                              __m256i *s)
+void DILITHIUM_shake128_squeezeblocks4x(
+        uint8_t *h0,
+        uint8_t *h1,
+        uint8_t *h2,
+        uint8_t *h3,
+        unsigned long nblocks,
+        __m256i *s)
 {
   keccak_squeezeblocks4x(h0, h1, h2, h3, nblocks, SHAKE128_RATE, s);
 }
 
-void shake256_absorb4x(__m256i *s,
-                       const unsigned char *m0,
-                       const unsigned char *m1,
-                       const unsigned char *m2,
-                       const unsigned char *m3,
-                       unsigned long long mlen)
+void DILITHIUM_shake256_absorb4x(
+        __m256i *s,
+        const uint8_t *m0,
+        const uint8_t *m1,
+        const uint8_t *m2,
+        const uint8_t *m3,
+        unsigned long long mlen)
 {
   keccak_absorb4x(s, SHAKE256_RATE, m0, m1, m2, m3, mlen, 0x1F);
 }
 
-void shake256_squeezeblocks4x(unsigned char *h0,
-                              unsigned char *h1,
-                              unsigned char *h2,
-                              unsigned char *h3,
-                              unsigned long nblocks,
-                              __m256i *s)
+void DILITHIUM_shake256_squeezeblocks4x(
+        uint8_t *h0,
+        uint8_t *h1,
+        uint8_t *h2,
+        uint8_t *h3,
+        unsigned long nblocks,
+        __m256i *s)
 {
   keccak_squeezeblocks4x(h0, h1, h2, h3, nblocks, SHAKE256_RATE, s);
 }
 
-void shake128_4x(unsigned char *h0,
-                 unsigned char *h1,
-                 unsigned char *h2,
-                 unsigned char *h3,
-                 unsigned long long hlen,
-                 const unsigned char *m0,
-                 const unsigned char *m1,
-                 const unsigned char *m2,
-                 const unsigned char *m3,
-                 unsigned long long mlen)
+void DILITHIUM_shake128_4x(
+        uint8_t *h0,
+        uint8_t *h1,
+        uint8_t *h2,
+        uint8_t *h3,
+        unsigned long long hlen,
+        const uint8_t *m0,
+        const uint8_t *m1,
+        const uint8_t *m2,
+        const uint8_t *m3,
+        unsigned long long mlen)
 {
   unsigned int i;
   unsigned long nblocks = hlen/SHAKE128_RATE;
-  unsigned char t[4][SHAKE128_RATE];
+  uint8_t t[4][SHAKE128_RATE];
   __m256i s[25];
 
-  shake128_absorb4x(s, m0, m1, m2, m3, mlen);
-  shake128_squeezeblocks4x(h0, h1, h2, h3, nblocks, s);
+  DILITHIUM_shake128_absorb4x(s, m0, m1, m2, m3, mlen);
+  DILITHIUM_shake128_squeezeblocks4x(h0, h1, h2, h3, nblocks, s);
 
   h0 += nblocks*SHAKE128_RATE;
   h1 += nblocks*SHAKE128_RATE;
@@ -201,7 +196,7 @@ void shake128_4x(unsigned char *h0,
   hlen -= nblocks*SHAKE128_RATE;
 
   if(hlen) {
-    shake128_squeezeblocks4x(t[0], t[1], t[2], t[3], 1, s);
+    DILITHIUM_shake128_squeezeblocks4x(t[0], t[1], t[2], t[3], 1, s);
     for(i = 0; i < hlen; ++i) {
       h0[i] = t[0][i];
       h1[i] = t[1][i];
@@ -211,24 +206,25 @@ void shake128_4x(unsigned char *h0,
   }
 }
 
-void shake256_4x(unsigned char *h0,
-                 unsigned char *h1,
-                 unsigned char *h2,
-                 unsigned char *h3,
-                 unsigned long long hlen,
-                 const unsigned char *m0,
-                 const unsigned char *m1,
-                 const unsigned char *m2,
-                 const unsigned char *m3,
-                 unsigned long long mlen)
+void DILITHIUM_shake256_4x(
+        uint8_t *h0,
+        uint8_t *h1,
+        uint8_t *h2,
+        uint8_t *h3,
+        unsigned long long hlen,
+        const uint8_t *m0,
+        const uint8_t *m1,
+        const uint8_t *m2,
+        const uint8_t *m3,
+        unsigned long long mlen)
 {
   unsigned int i;
   unsigned long nblocks = hlen/SHAKE256_RATE;
-  unsigned char t[4][SHAKE256_RATE];
+  uint8_t t[4][SHAKE256_RATE];
   __m256i s[25];
 
-  shake256_absorb4x(s, m0, m1, m2, m3, mlen);
-  shake256_squeezeblocks4x(h0, h1, h2, h3, nblocks, s);
+  DILITHIUM_shake256_absorb4x(s, m0, m1, m2, m3, mlen);
+  DILITHIUM_shake256_squeezeblocks4x(h0, h1, h2, h3, nblocks, s);
 
   h0 += nblocks*SHAKE256_RATE;
   h1 += nblocks*SHAKE256_RATE;
@@ -237,7 +233,7 @@ void shake256_4x(unsigned char *h0,
   hlen -= nblocks*SHAKE256_RATE;
 
   if(hlen) {
-    shake256_squeezeblocks4x(t[0], t[1], t[2], t[3], 1, s);
+    DILITHIUM_shake256_squeezeblocks4x(t[0], t[1], t[2], t[3], 1, s);
     for(i = 0; i < hlen; ++i) {
       h0[i] = t[0][i];
       h1[i] = t[1][i];

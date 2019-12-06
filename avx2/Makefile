@@ -1,66 +1,43 @@
-CC ?= /usr/bin/cc
-CFLAGS += -Wall -Wextra -march=native -mtune=native -O3 -fomit-frame-pointer
-#CFLAGS += -DMODE=3
-NISTFLAGS += -march=native -mtune=native -O3 -fomit-frame-pointer
-#NISTFLAGS += -DMODE=3
-SOURCES = sign.c polyvec.c poly.c packing.c ntt.s invntt.s pointwise.S \
-  nttconsts.c rejsample.c reduce.s rounding.c
-HEADERS = config.h api.h params.h sign.h polyvec.h poly.h packing.h ntt.h \
-  rejsample.h reduce.h rounding.h symmetric.h
-KECCAK_SOURCES = $(SOURCES) fips202.c fips202x4.c \
-  keccak4x/KeccakP-1600-times4-SIMD256.o
-KECCAK_HEADERS = $(HEADERS) fips202.h fips202x4.h
-AES_SOURCES = $(SOURCES) fips202.c aes256ctr.c
-AES_HEADERS = $(HEADERS) fips202.h aes256ctr.h
+# This Makefile can be used with GNU Make or BSD Make
 
-all: PQCgenKAT_sign test/test_vectors test/test_dilithium
+LIB=libdilithium3_clean.a
 
-keccak4x/KeccakP-1600-times4-SIMD256.o: keccak4x/KeccakP-1600-times4-SIMD256.c \
-  keccak4x/align.h keccak4x/brg_endian.h keccak4x/KeccakP-1600-times4-SnP.h \
-  keccak4x/KeccakP-1600-unrolling.macros keccak4x/SIMD256-config.h
-	$(CC) $(CFLAGS) -c $< -o $@
+SOURCES = fips202x4.c invntt.s nttconsts.c ntt.s packing.c pointwise.S poly.c \
+		  polyvec.c reduce.s rejsample.c rounding.c sign.c stream.c
+OBJECTS = fips202x4.o invntt.o nttconsts.o ntt.o packing.o pointwise.o poly.o \
+		  polyvec.o reduce.o rejsample.o rounding.o sign.o stream.o
+HEADERS = alignment.h api.h params.h sign.h polyvec.h poly.h packing.h ntt.h  \
+		  nttconsts.h reduce.h rounding.h rejsample.h symmetric.h stream.h    \
+		  fips202x4.h shuffle.inc
 
-PQCgenKAT_sign: PQCgenKAT_sign.c rng.c $(KECCAK_SOURCES) rng.h $(KECCAK_HEADERS)
-	$(CC) $(NISTFLAGS) $< rng.c $(KECCAK_SOURCES) -o $@ -lcrypto
+CFLAGS=-O3 -Wall -Wextra -Wpedantic -Wvla -Werror \
+	   -Wmissing-prototypes -Wredundant-decls -std=c99 \
+	   -Wcast-align \
+	   -mavx2 -mbmi -mpopcnt -I../../../common $(EXTRAFLAGS)
 
-PQCgenKAT_sign-AES: PQCgenKAT_sign.c rng.c $(AES_SOURCES) rng.h $(AES_HEADERS)
-	$(CC) $(NISTFLAGS) -DUSE_AES $< rng.c $(AES_SOURCES) -o $@ -lcrypto
+all: $(LIB)
 
-test/test_vectors: test/test_vectors.c rng.c $(KECCAK_SOURCES) rng.h \
-  $(KECCAK_HEADERS)
-	$(CC) $(NISTFLAGS) $< rng.c $(KECCAK_SOURCES) -o $@ -lcrypto
+KECCAK4XDIR=../../../common/keccak4x
+KECCAK4XOBJ=KeccakP-1600-times4-SIMD256.o
+KECCAK4X=$(KECCAK4XDIR)/$(KECCAK4XOBJ)
 
-test/test_vectors-AES: test/test_vectors.c rng.c $(AES_SOURCES) rng.h \
-  $(AES_HEADERS)
-	$(CC) $(NISTFLAGS) -DUSE_AES $< rng.c $(AES_SOURCES) -o $@ -lcrypto
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-test/test_dilithium: test/test_dilithium.c randombytes.c test/cpucycles.c \
-  test/speed.c $(KECCAK_SOURCES) randombytes.h test/cpucycles.h test/speed.h \
-  $(KECCAK_HEADERS)
-	$(CC) $(CFLAGS) $< randombytes.c test/cpucycles.c test/speed.c \
-	  $(KECCAK_SOURCES) -o $@
+%.o: %.s $(HEADERS)
+	$(AS) -o $@ $<
 
-test/test_dilithium-AES: test/test_dilithium.c randombytes.c test/cpucycles.c \
-  test/speed.c $(AES_SOURCES) randombytes.h test/cpucycles.h test/speed.h \
-  $(AES_HEADERS)
-	$(CC) $(CFLAGS) -DUSE_AES $< randombytes.c test/cpucycles.c \
-	  test/speed.c $(AES_SOURCES) -o $@
+%.o: %.S $(HEADERS)
+	$(AS) -c -o $@ $<
 
-test/test_mul: test/test_mul.c randombytes.c test/cpucycles.c test/speed.c \
-  $(KECCAK_SOURCES) randombytes.h test/cpucycles.h test/speed.h \
-  $(KECCAK_HEADERS)
-	$(CC) $(CFLAGS) -UDBENCH $< randombytes.c test/cpucycles.c \
-	  test/speed.c $(KECCAK_SOURCES) -o $@
+$(LIB): $(OBJECTS) $(KECCAK4X)
+	$(AR) -r $@ $^
 
-.PHONY: clean
+$(KECCAK4X):
+	$(MAKE) -C $(KECCAK4XDIR) $(KECCAK4XOBJ)
 
 clean:
-	rm -f *~ test/*~
-	rm -f keccak4x/KeccakP-1600-times4-SIMD256.o
-	rm -f PQCgenKAT_sign
-	rm -f PQCgenKAT_sign-AES
-	rm -f test/test_vectors
-	rm -f test/test_vectors-AES
-	rm -f test/test_dilithium
-	rm -f test/test_dilithium-AES
-	rm -f test/test_mul
+	$(RM) $(OBJECTS)
+	$(RM) $(LIB)
+	$(MAKE) -C $(KECCAK4XDIR) clean
+

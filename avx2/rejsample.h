@@ -3,17 +3,24 @@
 
 #include <stdint.h>
 
-unsigned int rej_uniform(uint32_t *r,
-                         unsigned int len,
-                         const unsigned char *buf,
-                         unsigned int buflen);
-unsigned int rej_eta(uint32_t *r,
-                     unsigned int len,
-                     const unsigned char *buf,
-                     unsigned int buflen);
-unsigned int rej_gamma1m1(uint32_t *r,
-                          unsigned int len,
-                          const unsigned char *buf,
-                          unsigned int buflen);
+#include "poly.h"
+
+unsigned int DILITHIUM_rej_uniform(
+        uint32_t *r,
+        unsigned int len,
+        const uint8_t *buf,
+        unsigned int buflen);
+
+unsigned int DILITHIUM_rej_eta(
+        uint32_t *r,
+        unsigned int len,
+        const uint8_t *buf,
+        unsigned int buflen);
+
+unsigned int DILITHIUM_rej_gamma1m1(
+        uint32_t *r,
+        unsigned int len,
+        const uint8_t *buf,
+        unsigned int buflen);
 
 #endif

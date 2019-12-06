@@ -1,5 +1,5 @@
-#ifndef REDUCE_H
-#define REDUCE_H
+#ifndef DILITHIUM_REDUCE_H
+#define DILITHIUM_REDUCE_H
 
 #include <stdint.h>
 
@@ -7,15 +7,15 @@
 #define QINV 4236238847U // -q^(-1) mod 2^32
 
 /* a <= Q*2^32 => r < 2*Q */
-uint32_t montgomery_reduce(uint64_t a);
+uint32_t DILITHIUM_montgomery_reduce(uint64_t a);
 
 /* r < 2*Q */
-uint32_t reduce32(uint32_t a);
+uint32_t DILITHIUM_reduce32(uint32_t a);
 
 /* a < 2*Q => r < Q */
-uint32_t csubq(uint32_t a);
+uint32_t DILITHIUM_csubq(uint32_t a);
 
 /* r < Q */
-uint32_t freeze(uint32_t a);
+uint32_t DILITHIUM_freeze(uint32_t a);
 
 #endif

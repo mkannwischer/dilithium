@@ -1,72 +1,56 @@
-#include <stdint.h>
 #include <immintrin.h>
-#include "test/cpucycles.h"
-#include "symmetric.h"
-#include "params.h"
-#include "reduce.h"
-#include "rounding.h"
+#include <stdint.h>
+
 #include "ntt.h"
+#include "nttconsts.h"
+#include "params.h"
 #include "poly.h"
+#include "reduce.h"
 #include "rejsample.h"
-
-#ifdef DBENCH
-extern const unsigned long long timing_overhead;
-extern unsigned long long *tred, *tadd, *tmul, *tround, *tsample, *tpack;
-#endif
-
-extern const uint32_t _8x2q[8];
+#include "rounding.h"
+#include "symmetric.h"
+#include "fips202x4.h"
 
 /*************************************************
-* Name:        poly_reduce
+* Name:        DILITHIUM_poly_reduce
 *
 * Description: Reduce all coefficients of input polynomial to representative
 *              in [0,2*Q[.
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_reduce(poly *a) {
-  DBENCH_START();
-
-  reduce_avx(a->coeffs);
-
-  DBENCH_STOP(*tred);
+void DILITHIUM_poly_reduce(poly *a) {
+  DILITHIUM_reduce_avx(a->coeffs);
 }
 
 /*************************************************
-* Name:        poly_csubq
+* Name:        DILITHIUM_poly_csubq
 *
 * Description: For all coefficients of input polynomial subtract Q if
 *              coefficient is bigger than Q.
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_csubq(poly *a) {
-  DBENCH_START();
-
-  csubq_avx(a->coeffs);
-
-  DBENCH_STOP(*tred);
+void DILITHIUM_poly_csubq(poly *a) {
+  DILITHIUM_csubq_avx(a->coeffs);
 }
 
 /*************************************************
-* Name:        poly_freeze
+* Name:        DILITHIUM_poly_freeze
 *
 * Description: Reduce all coefficients of the polynomial to standard
 *              representatives.
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_freeze(poly *a) {
-  DBENCH_START();
+void DILITHIUM_poly_freeze(poly *a) {
+  DILITHIUM_reduce_avx(a->coeffs);
+  DILITHIUM_csubq_avx(a->coeffs);
 
-  reduce_avx(a->coeffs);
-  csubq_avx(a->coeffs);
-
-  DBENCH_STOP(*tred);
 }
 
 /*************************************************
-* Name:        poly_add
+* Name:        DILITHIUM_poly_add
 *
 * Description: Add polynomials. No modular reduction is performed.
 *
@@ -74,23 +58,19 @@ void poly_freeze(poly *a) {
 *              - const poly *a: pointer to first summand
 *              - const poly *b: pointer to second summand
 **************************************************/
-void poly_add(poly *c, const poly *a, const poly *b)  {
+void DILITHIUM_poly_add(poly *c, const poly *a, const poly *b)  {
   unsigned int i;
   __m256i vec0, vec1;
-  DBENCH_START();
-
-  for(i = 0; i < N; i += 8) {
-    vec0 = _mm256_load_si256((__m256i *)&a->coeffs[i]);
-    vec1 = _mm256_load_si256((__m256i *)&b->coeffs[i]);
+  for(i = 0; i < N/8; i++) {
+    vec0 = _mm256_load_si256(&a->coeffs_x8[i]);
+    vec1 = _mm256_load_si256(&b->coeffs_x8[i]);
     vec0 = _mm256_add_epi32(vec0, vec1);
-    _mm256_store_si256((__m256i *)&c->coeffs[i], vec0);
+    _mm256_store_si256(&c->coeffs_x8[i], vec0);
   }
-
-  DBENCH_STOP(*tadd);
 }
 
 /*************************************************
-* Name:        poly_sub
+* Name:        DILITHIUM_poly_sub
 *
 * Description: Subtract polynomials. Assumes coefficients of second input
 *              polynomial to be less than 2*Q. No modular reduction is
@@ -101,64 +81,55 @@ void poly_add(poly *c, const poly *a, const poly *b)  {
 *              - const poly *b: pointer to second input polynomial to be
 *                               subtraced from first input polynomial
 **************************************************/
-void poly_sub(poly *c, const poly *a, const poly *b) {
+void DILITHIUM_poly_sub(poly *c, const poly *a, const poly *b) {
   unsigned int i;
   __m256i vec0, vec1;
-  const __m256i twoq = _mm256_load_si256((__m256i *)_8x2q);
-  DBENCH_START();
+  const __m256i twoq = _mm256_load_si256(_DILITHIUM_8x2q.as_vec);
 
-  for(i = 0; i < N; i += 8) {
-    vec0 = _mm256_load_si256((__m256i *)&a->coeffs[i]);
-    vec1 = _mm256_load_si256((__m256i *)&b->coeffs[i]);
+  for(i = 0; i < N/8; i++) {
+    vec0 = _mm256_load_si256(&a->coeffs_x8[i]);
+    vec1 = _mm256_load_si256(&b->coeffs_x8[i]);
     vec0 = _mm256_add_epi32(vec0, twoq);
     vec0 = _mm256_sub_epi32(vec0, vec1);
-    _mm256_store_si256((__m256i *)&c->coeffs[i], vec0);
+    _mm256_store_si256(&c->coeffs_x8[i], vec0);
   }
-
-  DBENCH_STOP(*tadd);
 }
 
 /*************************************************
-* Name:        poly_shiftl
+* Name:        DILITHIUM_poly_shiftl
 *
 * Description: Multiply polynomial by 2^D without modular reduction. Assumes
 *              input coefficients to be less than 2^{32-D}.
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_shiftl(poly *a) {
+void DILITHIUM_poly_shiftl(poly *a) {
   unsigned int i;
   __m256i vec;
-  DBENCH_START();
 
-  for(i = 0; i < N; i += 8) {
-    vec = _mm256_load_si256((__m256i *)&a->coeffs[i]);
+  for(i = 0; i < N/8; i++) {
+    vec = _mm256_load_si256(&a->coeffs_x8[i]);
     vec = _mm256_slli_epi32(vec, D);
-    _mm256_store_si256((__m256i *)&a->coeffs[i], vec);
+    _mm256_store_si256(&a->coeffs_x8[i], vec);
   }
-
-  DBENCH_STOP(*tmul);
 }
 
 /*************************************************
-* Name:        poly_ntt
+* Name:        DILITHIUM_poly_ntt
 *
 * Description: Forward NTT. Output coefficients can be up to 16*Q larger than
 *              input coefficients.
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_ntt(poly *a) {
+void DILITHIUM_poly_ntt(poly *a) {
   unsigned int i;
-  uint64_t __attribute__((aligned(32))) tmp[N];
-  DBENCH_START();
+  ALIGNED_UINT64(N) tmp;
 
   for(i = 0; i < N/32; ++i)
-    ntt_levels0t2_avx(tmp + 4*i, a->coeffs + 4*i, zetas + 1);
+    DILITHIUM_ntt_levels0t2_avx(tmp.as_arr + 4*i, a->coeffs + 4*i, DILITHIUM_zetas.as_arr + 1);
   for(i = 0; i < N/32; ++i)
-    ntt_levels3t8_avx(a->coeffs + 32*i, tmp + 32*i, zetas + 8 + 31*i);
-
-  DBENCH_STOP(*tmul);
+    DILITHIUM_ntt_levels3t8_avx(a->coeffs + 32*i, tmp.as_arr + 32*i, DILITHIUM_zetas.as_arr + 8 + 31*i);
 }
 
 /*************************************************
@@ -169,21 +140,18 @@ void poly_ntt(poly *a) {
 *
 * Arguments:   - poly *a: pointer to input/output polynomial
 **************************************************/
-void poly_invntt_montgomery(poly *a) {
+void DILITHIUM_poly_invntt_montgomery(poly *a) {
   unsigned int i;
-  uint64_t __attribute__((aligned(32))) tmp[N];
-  DBENCH_START();
+  ALIGNED_UINT64(N) tmp;
 
   for(i = 0; i < N/32; i++)
-    invntt_levels0t4_avx(tmp + 32*i, a->coeffs + 32*i, zetas_inv + 31*i);
+    DILITHIUM_invntt_levels0t4_avx(tmp.as_arr + 32*i, a->coeffs + 32*i, DILITHIUM_zetas_inv.as_arr + 31*i);
   for(i = 0; i < N/32; i++)
-    invntt_levels5t7_avx(a->coeffs + 4*i, tmp + 4*i, zetas_inv + 248);
-
-  DBENCH_STOP(*tmul);
+    DILITHIUM_invntt_levels5t7_avx(a->coeffs + 4*i, tmp.as_arr + 4*i, DILITHIUM_zetas_inv.as_arr + 248);
 }
 
 /*************************************************
-* Name:        poly_pointwise_invmontgomery
+* Name:        DILITHIUM_poly_pointwise_invmontgomery
 *
 * Description: Pointwise multiplication of polynomials in NTT domain
 *              representation and multiplication of resulting polynomial
@@ -194,16 +162,12 @@ void poly_invntt_montgomery(poly *a) {
 *              - const poly *a: pointer to first input polynomial
 *              - const poly *b: pointer to second input polynomial
 **************************************************/
-void poly_pointwise_invmontgomery(poly *c, const poly *a, const poly *b) {
-  DBENCH_START();
-
-  pointwise_avx(c->coeffs, a->coeffs, b->coeffs);
-
-  DBENCH_STOP(*tmul);
+void DILITHIUM_poly_pointwise_invmontgomery(poly *c, const poly *a, const poly *b) {
+  DILITHIUM_pointwise_avx(c->coeffs, a->coeffs, b->coeffs);
 }
 
 /*************************************************
-* Name:        poly_power2round
+* Name:        DILITHIUM_poly_power2round
 *
 * Description: For all coefficients c of the input polynomial,
 *              compute c0, c1 such that c mod Q = c1*2^D + c0
@@ -214,21 +178,16 @@ void poly_pointwise_invmontgomery(poly *c, const poly *a, const poly *b) {
 *              - poly *a0: pointer to output polynomial with coefficients Q + a0
 *              - const poly *v: pointer to input polynomial
 **************************************************/
-void poly_power2round(poly * restrict a1,
+void DILITHIUM_poly_power2round(poly * restrict a1,
                       poly * restrict a0,
                       const poly * restrict a)
 {
-  unsigned int i;
-  DBENCH_START();
-
-  for(i = 0; i < N; ++i)
-    a1->coeffs[i] = power2round(a->coeffs[i], &a0->coeffs[i]);
-
-  DBENCH_STOP(*tround);
+  for(size_t i = 0; i < N; ++i)
+    a1->coeffs[i] = DILITHIUM_power2round(a->coeffs[i], &a0->coeffs[i]);
 }
 
 /*************************************************
-* Name:        poly_decompose
+* Name:        DILITHIUM_poly_decompose
 *
 * Description: For all coefficients c of the input polynomial,
 *              compute high and low bits c0, c1 such c mod Q = c1*ALPHA + c0
@@ -240,21 +199,18 @@ void poly_power2round(poly * restrict a1,
 *              - poly *a0: pointer to output polynomial with coefficients Q + a0
 *              - const poly *c: pointer to input polynomial
 **************************************************/
-void poly_decompose(poly * restrict a1,
-                    poly * restrict a0,
-                    const poly * restrict a)
+void DILITHIUM_poly_decompose(
+        poly * restrict a1,
+        poly * restrict a0,
+        const poly * restrict a)
 {
   unsigned int i;
-  DBENCH_START();
-
   for(i = 0; i < N; ++i)
-    a1->coeffs[i] = decompose(a->coeffs[i], &a0->coeffs[i]);
-
-  DBENCH_STOP(*tround);
+    a1->coeffs[i] = DILITHIUM_decompose(a->coeffs[i], &a0->coeffs[i]);
 }
 
 /*************************************************
-* Name:        poly_make_hint
+* Name:        DILITHIUM_poly_make_hint
 *
 * Description: Compute hint polynomial. The coefficients of which indicate
 *              whether the low bits of the corresponding coefficient of
@@ -266,46 +222,41 @@ void poly_decompose(poly * restrict a1,
 *
 * Returns number of 1 bits.
 **************************************************/
-unsigned int poly_make_hint(poly * restrict h,
-                            const poly * restrict a0,
-                            const poly * restrict a1)
+unsigned int DILITHIUM_poly_make_hint(
+        poly * restrict h,
+        const poly * restrict a0,
+        const poly * restrict a1)
 {
   unsigned int i, s = 0;
-  DBENCH_START();
-
   for(i = 0; i < N; ++i) {
-    h->coeffs[i] = make_hint(a0->coeffs[i], a1->coeffs[i]);
+    h->coeffs[i] = DILITHIUM_make_hint(a0->coeffs[i], a1->coeffs[i]);
     s += h->coeffs[i];
   }
-
-  DBENCH_STOP(*tround);
   return s;
 }
 
 /*************************************************
-* Name:        poly_use_hint
-*
-* Description: Use hint polynomial to correct the high bits of a polynomial.
+ * Name:       DILITHIUM_poly_use_hint
+ *
+ * Description: Use hint polynomial to correct the high bits of a polynomial.
 *
 * Arguments:   - poly *a: pointer to output polynomial with corrected high bits
 *              - const poly *b: pointer to input polynomial
 *              - const poly *h: pointer to input hint polynomial
 **************************************************/
-void poly_use_hint(poly * restrict a,
-                   const poly * restrict b,
-                   const poly * restrict h)
+void DILITHIUM_poly_use_hint(
+        poly * restrict a,
+        const poly * restrict b,
+        const poly * restrict h)
 {
   unsigned int i;
-  DBENCH_START();
 
   for(i = 0; i < N; ++i)
-    a->coeffs[i] = use_hint(b->coeffs[i], h->coeffs[i]);
-
-  DBENCH_STOP(*tround);
+    a->coeffs[i] = DILITHIUM_use_hint(b->coeffs[i], h->coeffs[i]);
 }
 
 /*************************************************
-* Name:        poly_chknorm
+* Name:        DILITHIUM_poly_chknorm
 *
 * Description: Check infinity norm of polynomial against given bound.
 *              Assumes input coefficients to be standard representatives.
@@ -315,10 +266,9 @@ void poly_use_hint(poly * restrict a,
 *
 * Returns 0 if norm is strictly smaller than B and 1 otherwise.
 **************************************************/
-int poly_chknorm(const poly *a, uint32_t B) {
+int DILITHIUM_poly_chknorm(const poly *a, uint32_t B) {
   unsigned int i;
   int32_t t;
-  DBENCH_START();
 
   /* It is ok to leak which coefficient violates the bound since
      the probability for each coefficient is independent of secret
@@ -330,17 +280,15 @@ int poly_chknorm(const poly *a, uint32_t B) {
     t = (Q-1)/2 - t;
 
     if((uint32_t)t >= B) {
-      DBENCH_STOP(*tsample);
       return 1;
     }
   }
 
-  DBENCH_STOP(*tsample);
   return 0;
 }
 
 /*************************************************
-* Name:        rej_uniform
+* Name:        rej_uniform_ref
 *
 * Description: Sample uniformly random coefficients in [0, Q-1] by
 *              performing rejection sampling using array of random bytes.
@@ -360,7 +308,6 @@ static unsigned int rej_uniform_ref(uint32_t *a,
 {
   unsigned int ctr, pos;
   uint32_t t;
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr < len && pos + 3 <= buflen) {
@@ -373,7 +320,6 @@ static unsigned int rej_uniform_ref(uint32_t *a,
       a[ctr++] = t;
   }
 
-  DBENCH_STOP(*tsample);
   return ctr;
 }
 
@@ -389,20 +335,22 @@ static unsigned int rej_uniform_ref(uint32_t *a,
 *                                            SEEDBYTES
 *              - uint16_t nonce: 2-byte nonce
 **************************************************/
-void poly_uniform(poly *a,
+#define POLY_UNIFORM_NBLOCKS ((769 + STREAM128_BLOCKBYTES) / STREAM128_BLOCKBYTES)
+#define POLY_UNIFORM_BUFLEN (POLY_UNIFORM_NBLOCKS * STREAM128_BLOCKBYTES)
+void DILITHIUM_poly_uniform(poly *a,
                   const unsigned char seed[SEEDBYTES],
                   uint16_t nonce)
 {
   unsigned int i, ctr, off;
-  unsigned int nblocks = (769 + STREAM128_BLOCKBYTES)/STREAM128_BLOCKBYTES;
-  unsigned int buflen = nblocks*STREAM128_BLOCKBYTES;
-  unsigned char buf[buflen + 2];
+  unsigned int nblocks = POLY_UNIFORM_NBLOCKS;
+  unsigned int buflen = POLY_UNIFORM_BUFLEN;
+  unsigned char buf[POLY_UNIFORM_BUFLEN + 2];
   stream128_state state;
 
   stream128_init(&state, seed, nonce);
   stream128_squeezeblocks(buf, nblocks, &state);
 
-  ctr = rej_uniform(a->coeffs, N, buf, buflen);
+  ctr = DILITHIUM_rej_uniform(a->coeffs, N, buf, buflen);
 
   while(ctr < N) {
     off = buflen % 3;
@@ -416,7 +364,7 @@ void poly_uniform(poly *a,
 }
 
 #ifndef USE_AES
-void poly_uniform_4x(poly *a0,
+void DILITHIUM_poly_uniform_4x(poly *a0,
                      poly *a1,
                      poly *a2,
                      poly *a3,
@@ -446,18 +394,18 @@ void poly_uniform_4x(poly *a0,
   inbuf[3][SEEDBYTES+0] = nonce3;
   inbuf[3][SEEDBYTES+1] = nonce3 >> 8;
 
-  shake128_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
+  DILITHIUM_shake128_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
                     SEEDBYTES + 2);
-  shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 5,
+  DILITHIUM_shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 5,
                            state);
 
-  ctr0 = rej_uniform(a0->coeffs, N, outbuf[0], 5*SHAKE128_RATE);
-  ctr1 = rej_uniform(a1->coeffs, N, outbuf[1], 5*SHAKE128_RATE);
-  ctr2 = rej_uniform(a2->coeffs, N, outbuf[2], 5*SHAKE128_RATE);
-  ctr3 = rej_uniform(a3->coeffs, N, outbuf[3], 5*SHAKE128_RATE);
+  ctr0 = DILITHIUM_rej_uniform(a0->coeffs, N, outbuf[0], 5*SHAKE128_RATE);
+  ctr1 = DILITHIUM_rej_uniform(a1->coeffs, N, outbuf[1], 5*SHAKE128_RATE);
+  ctr2 = DILITHIUM_rej_uniform(a2->coeffs, N, outbuf[2], 5*SHAKE128_RATE);
+  ctr3 = DILITHIUM_rej_uniform(a3->coeffs, N, outbuf[3], 5*SHAKE128_RATE);
 
   while(ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
-    shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
+    DILITHIUM_shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
                              state);
 
     ctr0 += rej_uniform_ref(a0->coeffs + ctr0, N - ctr0, outbuf[0],
@@ -491,12 +439,8 @@ static unsigned int rej_eta_ref(uint32_t *a,
                                 const unsigned char *buf,
                                 unsigned int buflen)
 {
-#if ETA > 7
-#error "rej_eta() assumes ETA <= 7"
-#endif
   unsigned int ctr, pos;
   uint32_t t0, t1;
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr < len && pos < buflen) {
@@ -514,7 +458,6 @@ static unsigned int rej_eta_ref(uint32_t *a,
       a[ctr++] = Q + ETA - t1;
   }
 
-  DBENCH_STOP(*tsample);
   return ctr;
 }
 
@@ -530,21 +473,20 @@ static unsigned int rej_eta_ref(uint32_t *a,
 *                                            SEEDBYTES
 *              - uint16_t nonce: 2-byte nonce
 **************************************************/
-void poly_uniform_eta(poly *a,
+#define POLY_UNIFORM_ETA_NBLOCKS (((N / 2 * (1u << SETABITS)) / (2 * ETA + 1) + STREAM128_BLOCKBYTES) / STREAM128_BLOCKBYTES)
+#define POLY_UNIFORM_ETA_BUFLEN (POLY_UNIFORM_ETA_NBLOCKS*STREAM128_BLOCKBYTES)
+void DILITHIUM_poly_uniform_eta(poly *a,
                       const unsigned char seed[SEEDBYTES],
                       uint16_t nonce)
 {
   unsigned int ctr;
-  unsigned int nblocks = ((N/2 * (1U << SETABITS)) / (2*ETA + 1)
-                          + STREAM128_BLOCKBYTES) / STREAM128_BLOCKBYTES;
-  unsigned int buflen = nblocks*STREAM128_BLOCKBYTES;
-  unsigned char buf[buflen];
+  unsigned char buf[POLY_UNIFORM_ETA_BUFLEN];
   stream128_state state;
 
   stream128_init(&state, seed, nonce);
-  stream128_squeezeblocks(buf, nblocks, &state);
+  stream128_squeezeblocks(buf, POLY_UNIFORM_ETA_NBLOCKS, &state);
 
-  ctr = rej_eta(a->coeffs, N, buf, buflen);
+  ctr = DILITHIUM_rej_eta(a->coeffs, N, buf, POLY_UNIFORM_ETA_BUFLEN);
 
   while(ctr < N) {
     stream128_squeezeblocks(buf, 1, &state);
@@ -553,7 +495,7 @@ void poly_uniform_eta(poly *a,
 }
 
 #ifndef USE_AES
-void poly_uniform_eta_4x(poly *a0,
+void DILITHIUM_poly_uniform_eta_4x(poly *a0,
                          poly *a1,
                          poly *a2,
                          poly *a3,
@@ -583,18 +525,18 @@ void poly_uniform_eta_4x(poly *a0,
   inbuf[3][SEEDBYTES+0] = nonce3;
   inbuf[3][SEEDBYTES+1] = nonce3 >> 8;
 
-  shake128_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
+  DILITHIUM_shake128_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
                     SEEDBYTES + 2);
-  shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 2,
+  DILITHIUM_shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 2,
                            state);
 
-  ctr0 = rej_eta(a0->coeffs, N, outbuf[0], 2*SHAKE128_RATE);
-  ctr1 = rej_eta(a1->coeffs, N, outbuf[1], 2*SHAKE128_RATE);
-  ctr2 = rej_eta(a2->coeffs, N, outbuf[2], 2*SHAKE128_RATE);
-  ctr3 = rej_eta(a3->coeffs, N, outbuf[3], 2*SHAKE128_RATE);
+  ctr0 = DILITHIUM_rej_eta(a0->coeffs, N, outbuf[0], 2*SHAKE128_RATE);
+  ctr1 = DILITHIUM_rej_eta(a1->coeffs, N, outbuf[1], 2*SHAKE128_RATE);
+  ctr2 = DILITHIUM_rej_eta(a2->coeffs, N, outbuf[2], 2*SHAKE128_RATE);
+  ctr3 = DILITHIUM_rej_eta(a3->coeffs, N, outbuf[3], 2*SHAKE128_RATE);
 
   while(ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
-    shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
+    DILITHIUM_shake128_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
                              state);
 
     ctr0 += rej_eta_ref(a0->coeffs + ctr0, N - ctr0, outbuf[0], SHAKE128_RATE);
@@ -606,7 +548,7 @@ void poly_uniform_eta_4x(poly *a0,
 #endif
 
 /*************************************************
-* Name:        rej_gamma1m1
+* Name:        rej_gamma1m1_ref
 *
 * Description: Sample uniformly random coefficients
 *              in [-(GAMMA1 - 1), GAMMA1 - 1] by performing rejection sampling
@@ -625,12 +567,8 @@ static unsigned int rej_gamma1m1_ref(uint32_t *a,
                                      const unsigned char *buf,
                                      unsigned int buflen)
 {
-#if GAMMA1 > (1 << 19)
-#error "rej_gamma1m1() assumes GAMMA1 - 1 fits in 19 bits"
-#endif
   unsigned int ctr, pos;
   uint32_t t0, t1;
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr < len && pos + 5 <= buflen) {
@@ -650,13 +588,11 @@ static unsigned int rej_gamma1m1_ref(uint32_t *a,
     if(t1 <= 2*GAMMA1 - 2 && ctr < len)
       a[ctr++] = Q + GAMMA1 - 1 - t1;
   }
-
-  DBENCH_STOP(*tsample);
   return ctr;
 }
 
 /*************************************************
-* Name:        poly_uniform_gamma1m1
+* Name:        DILITHIUM_poly_uniform_gamma1m1
 *
 * Description: Sample polynomial with uniformly random coefficients
 *              in [-(GAMMA1 - 1), GAMMA1 - 1] by performing rejection
@@ -667,20 +603,21 @@ static unsigned int rej_gamma1m1_ref(uint32_t *a,
 *                                            CRHBYTES
 *              - uint16_t nonce: 16-bit nonce
 **************************************************/
-void poly_uniform_gamma1m1(poly *a,
+#define POLY_UNIFORM_GAMMA1M1_NBLOCKS ((641 + STREAM256_BLOCKBYTES) / STREAM256_BLOCKBYTES)
+#define POLY_UNIFORM_GAMMA1M1_BUFLEN (POLY_UNIFORM_GAMMA1M1_NBLOCKS * STREAM256_BLOCKBYTES)
+void DILITHIUM_poly_uniform_gamma1m1(poly *a,
                            const unsigned char seed[CRHBYTES],
                            uint16_t nonce)
 {
   unsigned int i, ctr, off;
-  unsigned int nblocks = (641 + STREAM256_BLOCKBYTES) / STREAM256_BLOCKBYTES;
-  unsigned int buflen = nblocks * STREAM256_BLOCKBYTES;
-  unsigned char buf[buflen + 4];
+  unsigned int buflen = POLY_UNIFORM_GAMMA1M1_BUFLEN;
+  unsigned char buf[POLY_UNIFORM_GAMMA1M1_BUFLEN + 4];
   stream256_state state;
 
   stream256_init(&state, seed, nonce);
-  stream256_squeezeblocks(buf, nblocks, &state);
+  stream256_squeezeblocks(buf, POLY_UNIFORM_ETA_NBLOCKS, &state);
 
-  ctr = rej_gamma1m1(a->coeffs, N, buf, buflen);
+  ctr = DILITHIUM_rej_gamma1m1(a->coeffs, N, buf, POLY_UNIFORM_GAMMA1M1_BUFLEN);
 
   while(ctr < N) {
     off = buflen % 5;
@@ -694,7 +631,7 @@ void poly_uniform_gamma1m1(poly *a,
 }
 
 #ifndef USE_AES
-void poly_uniform_gamma1m1_4x(poly *a0,
+void DILITHIUM_poly_uniform_gamma1m1_4x(poly *a0,
                               poly *a1,
                               poly *a2,
                               poly *a3,
@@ -724,9 +661,9 @@ void poly_uniform_gamma1m1_4x(poly *a0,
   inbuf[3][CRHBYTES + 0] = nonce3 & 0xFF;
   inbuf[3][CRHBYTES + 1] = nonce3 >> 8;
 
-  shake256_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
+  DILITHIUM_shake256_absorb4x(state, inbuf[0], inbuf[1], inbuf[2], inbuf[3],
                     CRHBYTES + 2);
-  shake256_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 5,
+  DILITHIUM_shake256_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 5,
                            state);
 
   ctr0 = rej_gamma1m1_ref(a0->coeffs, N, outbuf[0], 5*SHAKE256_RATE);
@@ -735,7 +672,7 @@ void poly_uniform_gamma1m1_4x(poly *a0,
   ctr3 = rej_gamma1m1_ref(a3->coeffs, N, outbuf[3], 5*SHAKE256_RATE);
 
   while(ctr0 < N || ctr1 < N || ctr2 < N || ctr3 < N) {
-    shake256_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
+    DILITHIUM_shake256_squeezeblocks4x(outbuf[0], outbuf[1], outbuf[2], outbuf[3], 1,
                              state);
 
     ctr0 += rej_gamma1m1_ref(a0->coeffs + ctr0, N - ctr0, outbuf[0],
@@ -751,7 +688,7 @@ void poly_uniform_gamma1m1_4x(poly *a0,
 #endif
 
 /*************************************************
-* Name:        polyeta_pack
+* Name:        DILITHIUM_polyeta_pack
 *
 * Description: Bit-pack polynomial with coefficients in [-ETA,ETA].
 *              Input coefficients are assumed to lie in [Q-ETA,Q+ETA].
@@ -760,13 +697,9 @@ void poly_uniform_gamma1m1_4x(poly *a0,
 *                                  POLETA_SIZE_PACKED bytes
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void polyeta_pack(unsigned char * restrict r, const poly * restrict a) {
-#if 2*ETA >= 16
-#error "polyeta_pack() assumes 2*ETA < 16"
-#endif
+void DILITHIUM_polyeta_pack(unsigned char * restrict r, const poly * restrict a) {
   unsigned int i;
   unsigned char t[8];
-  DBENCH_START();
 
 #if 2*ETA <= 7
   for(i = 0; i < N/8; ++i) {
@@ -790,12 +723,10 @@ void polyeta_pack(unsigned char * restrict r, const poly * restrict a) {
     r[i] = t[0] | (t[1] << 4);
   }
 #endif
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyeta_unpack
+* Name:        DILITHIUM_polyeta_unpack
 *
 * Description: Unpack polynomial with coefficients in [-ETA,ETA].
 *              Output coefficients lie in [Q-ETA,Q+ETA].
@@ -803,9 +734,8 @@ void polyeta_pack(unsigned char * restrict r, const poly * restrict a) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const unsigned char *a: byte array with bit-packed polynomial
 **************************************************/
-void polyeta_unpack(poly * restrict r, const unsigned char * restrict a) {
+void DILITHIUM_polyeta_unpack(poly * restrict r, const unsigned char * restrict a) {
   unsigned int i;
-  DBENCH_START();
 
 #if 2*ETA <= 7
   for(i = 0; i < N/8; ++i) {
@@ -835,12 +765,10 @@ void polyeta_unpack(poly * restrict r, const unsigned char * restrict a) {
     r->coeffs[2*i+1] = Q + ETA - r->coeffs[2*i+1];
   }
 #endif
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyt1_pack
+* Name:        DILITHIUM_polyt1_pack
 *
 * Description: Bit-pack polynomial t1 with coefficients fitting in 9 bits.
 *              Input coefficients are assumed to be standard representatives.
@@ -849,12 +777,8 @@ void polyeta_unpack(poly * restrict r, const unsigned char * restrict a) {
 *                                  POLT1_SIZE_PACKED bytes
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void polyt1_pack(unsigned char * restrict r, const poly * restrict a) {
-#if D != 14
-#error "polyt1_pack() assumes D == 14"
-#endif
+void DILITHIUM_polyt1_pack(unsigned char * restrict r, const poly * restrict a) {
   unsigned int i;
-  DBENCH_START();
 
   for(i = 0; i < N/8; ++i) {
     r[9*i+0]  = (a->coeffs[8*i+0] >> 0);
@@ -867,12 +791,10 @@ void polyt1_pack(unsigned char * restrict r, const poly * restrict a) {
     r[9*i+7]  = (a->coeffs[8*i+6] >> 2) | (a->coeffs[8*i+7] << 7);
     r[9*i+8]  = (a->coeffs[8*i+7] >> 1);
   }
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyt1_unpack
+* Name:        DILITHIUM_polyt1_unpack
 *
 * Description: Unpack polynomial t1 with 9-bit coefficients.
 *              Output coefficients are standard representatives.
@@ -880,10 +802,8 @@ void polyt1_pack(unsigned char * restrict r, const poly * restrict a) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const unsigned char *a: byte array with bit-packed polynomial
 **************************************************/
-void polyt1_unpack(poly * restrict r, const unsigned char * restrict a) {
+void DILITHIUM_polyt1_unpack(poly * restrict r, const unsigned char * restrict a) {
   unsigned int i;
-  DBENCH_START();
-
   for(i = 0; i < N/8; ++i) {
     r->coeffs[8*i+0] = ((a[9*i+0] >> 0) | ((uint32_t)a[9*i+1] << 8)) & 0x1FF;
     r->coeffs[8*i+1] = ((a[9*i+1] >> 1) | ((uint32_t)a[9*i+2] << 7)) & 0x1FF;
@@ -894,12 +814,10 @@ void polyt1_unpack(poly * restrict r, const unsigned char * restrict a) {
     r->coeffs[8*i+6] = ((a[9*i+6] >> 6) | ((uint32_t)a[9*i+7] << 2)) & 0x1FF;
     r->coeffs[8*i+7] = ((a[9*i+7] >> 7) | ((uint32_t)a[9*i+8] << 1)) & 0x1FF;
   }
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyt0_pack
+* Name:        DILITHIUM_polyt0_pack
 *
 * Description: Bit-pack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
 *              Input coefficients are assumed to lie in ]Q-2^{D-1}, Q+2^{D-1}].
@@ -908,10 +826,9 @@ void polyt1_unpack(poly * restrict r, const unsigned char * restrict a) {
 *                                  POLT0_SIZE_PACKED bytes
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void polyt0_pack(unsigned char * restrict r, const poly * restrict a) {
+void DILITHIUM_polyt0_pack(unsigned char * restrict r, const poly * restrict a) {
   unsigned int i;
   uint32_t t[4];
-  DBENCH_START();
 
   for(i = 0; i < N/4; ++i) {
     t[0] = Q + (1U << (D-1)) - a->coeffs[4*i+0];
@@ -930,12 +847,10 @@ void polyt0_pack(unsigned char * restrict r, const poly * restrict a) {
     r[7*i+5] |=  t[3] << 2;
     r[7*i+6]  =  t[3] >> 6;
   }
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyt0_unpack
+* Name:        DILITHIUM_polyt0_unpack
 *
 * Description: Unpack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
 *              Output coefficients lie in ]Q-2^{D-1},Q+2^{D-1}].
@@ -943,9 +858,8 @@ void polyt0_pack(unsigned char * restrict r, const poly * restrict a) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const unsigned char *a: byte array with bit-packed polynomial
 **************************************************/
-void polyt0_unpack(poly * restrict r, const unsigned char * restrict a) {
+void DILITHIUM_polyt0_unpack(poly * restrict r, const unsigned char * restrict a) {
   unsigned int i;
-  DBENCH_START();
 
   for(i = 0; i < N/4; ++i) {
     r->coeffs[4*i+0]  = a[7*i+0];
@@ -967,12 +881,10 @@ void polyt0_unpack(poly * restrict r, const unsigned char * restrict a) {
     r->coeffs[4*i+2] = Q + (1U << (D-1)) - r->coeffs[4*i+2];
     r->coeffs[4*i+3] = Q + (1U << (D-1)) - r->coeffs[4*i+3];
   }
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyz_pack
+* Name:        DILITHIUM_polyz_pack
 *
 * Description: Bit-pack polynomial z with coefficients
 *              in [-(GAMMA1 - 1), GAMMA1 - 1].
@@ -982,13 +894,9 @@ void polyt0_unpack(poly * restrict r, const unsigned char * restrict a) {
 *                                  POLZ_SIZE_PACKED bytes
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void polyz_pack(unsigned char * restrict r, const poly * restrict a) {
-#if GAMMA1 > (1 << 19)
-#error "polyz_pack() assumes GAMMA1 <= 2^{19}"
-#endif
+void DILITHIUM_polyz_pack(unsigned char * restrict r, const poly * restrict a) {
   unsigned int i;
   uint32_t t[2];
-  DBENCH_START();
 
   for(i = 0; i < N/2; ++i) {
     /* Map to {0,...,2*GAMMA1 - 2} */
@@ -1004,12 +912,10 @@ void polyz_pack(unsigned char * restrict r, const poly * restrict a) {
     r[5*i+3]  = t[1] >> 4;
     r[5*i+4]  = t[1] >> 12;
   }
-
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyz_unpack
+* Name:        DILITHIUM_polyz_unpack
 *
 * Description: Unpack polynomial z with coefficients
 *              in [-(GAMMA1 - 1), GAMMA1 - 1].
@@ -1018,9 +924,8 @@ void polyz_pack(unsigned char * restrict r, const poly * restrict a) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const unsigned char *a: byte array with bit-packed polynomial
 **************************************************/
-void polyz_unpack(poly * restrict r, const unsigned char * restrict a) {
+void DILITHIUM_polyz_unpack(poly * restrict r, const unsigned char * restrict a) {
   unsigned int i;
-  DBENCH_START();
 
   for(i = 0; i < N/2; ++i) {
     r->coeffs[2*i+0]  = a[5*i+0];
@@ -1037,11 +942,10 @@ void polyz_unpack(poly * restrict r, const unsigned char * restrict a) {
     r->coeffs[2*i+1] += ((int32_t)r->coeffs[2*i+1] >> 31) & Q;
   }
 
-  DBENCH_STOP(*tpack);
 }
 
 /*************************************************
-* Name:        polyw1_pack
+* Name:        DILITHIUM_polyw1_pack
 *
 * Description: Bit-pack polynomial w1 with coefficients in [0, 15].
 *              Input coefficients are assumed to be standard representatives.
@@ -1050,12 +954,9 @@ void polyz_unpack(poly * restrict r, const unsigned char * restrict a) {
 *                                  POLW1_SIZE_PACKED bytes
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void polyw1_pack(unsigned char * restrict r, const poly * restrict a) {
+void DILITHIUM_polyw1_pack(unsigned char * restrict r, const poly * restrict a) {
   unsigned int i;
-  DBENCH_START();
 
   for(i = 0; i < N/2; ++i)
     r[i] = a->coeffs[2*i+0] | (a->coeffs[2*i+1] << 4);
-
-  DBENCH_STOP(*tpack);
 }

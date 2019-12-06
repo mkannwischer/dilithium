@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-void reduce_avx(uint32_t a[N]);
-void csubq_avx(uint32_t a[N]);
+void DILITHIUM_reduce_avx(uint32_t a[N]);
+void DILITHIUM_csubq_avx(uint32_t a[N]);
 
 #endif

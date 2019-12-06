@@ -1,14 +1,10 @@
-#include <stdint.h>
 #include <immintrin.h>
+#include <stdint.h>
+
 #include "params.h"
-#include "test/cpucycles.h"
+#include "rejsample.h"
 
-#ifdef DBENCH
-extern const unsigned long long timing_overhead;
-extern unsigned long long *tsample;
-#endif
-
-static const unsigned char idx[256][8] = {
+static const uint8_t idx[256][8] = {
   { 0,  0,  0,  0,  0,  0,  0,  0},
   { 0,  0,  0,  0,  0,  0,  0,  0},
   { 1,  0,  0,  0,  0,  0,  0,  0},
@@ -267,17 +263,17 @@ static const unsigned char idx[256][8] = {
   { 0,  1,  2,  3,  4,  5,  6,  7}
 };
 
-unsigned int rej_uniform(uint32_t *r,
-                         unsigned int len,
-                         const unsigned char *buf,
-                         unsigned int buflen)
+unsigned int DILITHIUM_rej_uniform(
+        uint32_t *r,
+        unsigned int len,
+        const unsigned char *buf,
+        unsigned int buflen)
 {
   unsigned int i, ctr, pos;
   uint32_t vec[8];
   __m256i d, tmp;
   uint32_t good;
   const __m256i bound = _mm256_set1_epi32(Q);
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr + 8 <= len && pos + 24 <= buflen) {
@@ -288,14 +284,14 @@ unsigned int rej_uniform(uint32_t *r,
       vec[i] &= 0x7FFFFF;
     }
 
-    d = _mm256_loadu_si256((__m256i *)vec);
+    d = _mm256_loadu_si256((__m256i_u *)vec);
     tmp = _mm256_cmpgt_epi32(bound, d);
     good = _mm256_movemask_ps((__m256)tmp);
 
-    __m128i rid = _mm_loadl_epi64((__m128i *)&idx[good]);
+    __m128i rid = _mm_loadl_epi64((__m128i_u *)&idx[good]);
     tmp = _mm256_cvtepu8_epi32(rid);
     d = _mm256_permutevar8x32_epi32(d, tmp);
-    _mm256_storeu_si256((__m256i *)&r[ctr], d);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], d);
     ctr += __builtin_popcount(good);
   }
 
@@ -309,14 +305,14 @@ unsigned int rej_uniform(uint32_t *r,
       r[ctr++] = vec[0];
   }
 
-  DBENCH_STOP(*tsample);
   return ctr;
 }
 
-unsigned int rej_eta(uint32_t *r,
-                     unsigned int len,
-                     const unsigned char *buf,
-                     unsigned int buflen)
+unsigned int DILITHIUM_rej_eta(
+        uint32_t *r,
+        unsigned int len,
+        const unsigned char *buf,
+        unsigned int buflen)
 {
   unsigned int i, ctr, pos;
   uint8_t vec[32];
@@ -325,7 +321,6 @@ unsigned int rej_eta(uint32_t *r,
   uint32_t good;
   const __m256i bound = _mm256_set1_epi8(2*ETA + 1);
   const __m256i off = _mm256_set1_epi32(Q + ETA);
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr + 32 <= len && pos + 16 <= buflen) {
@@ -339,40 +334,40 @@ unsigned int rej_eta(uint32_t *r,
 #endif
     }
 
-    tmp0 = _mm256_loadu_si256((__m256i *)vec);
+    tmp0 = _mm256_loadu_si256((__m256i_u *)vec);
     tmp1 = _mm256_cmpgt_epi8(bound, tmp0);
     good = _mm256_movemask_epi8(tmp1);
 
     d0 = _mm256_castsi256_si128(tmp0);
-    rid = _mm_loadl_epi64((__m128i *)&idx[good & 0xFF]);
+    rid = _mm_loadl_epi64((__m128i_u *)&idx[good & 0xFF]);
     d1 = _mm_shuffle_epi8(d0, rid);
     tmp1 = _mm256_cvtepu8_epi32(d1);
     tmp1 = _mm256_sub_epi32(off, tmp1);
-    _mm256_storeu_si256((__m256i *)&r[ctr], tmp1);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], tmp1);
     ctr += __builtin_popcount(good & 0xFF);
 
     d0 = _mm_bsrli_si128(d0, 8);
-    rid = _mm_loadl_epi64((__m128i *)&idx[(good >> 8) & 0xFF]);
+    rid = _mm_loadl_epi64((__m128i_u *)&idx[(good >> 8) & 0xFF]);
     d1 = _mm_shuffle_epi8(d0, rid);
     tmp1 = _mm256_cvtepu8_epi32(d1);
     tmp1 = _mm256_sub_epi32(off, tmp1);
-    _mm256_storeu_si256((__m256i *)&r[ctr], tmp1);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], tmp1);
     ctr += __builtin_popcount((good >> 8) & 0xFF);
 
     d0 = _mm256_extracti128_si256(tmp0, 1);
-    rid = _mm_loadl_epi64((__m128i *)&idx[(good >> 16) & 0xFF]);
+    rid = _mm_loadl_epi64((__m128i_u *)&idx[(good >> 16) & 0xFF]);
     d1 = _mm_shuffle_epi8(d0, rid);
     tmp1 = _mm256_cvtepu8_epi32(d1);
     tmp1 = _mm256_sub_epi32(off, tmp1);
-    _mm256_storeu_si256((__m256i *)&r[ctr], tmp1);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], tmp1);
     ctr += __builtin_popcount((good >> 16) & 0xFF);
 
     d0 = _mm_bsrli_si128(d0, 8);
-    rid = _mm_loadl_epi64((__m128i *)&idx[(good >> 24) & 0xFF]);
+    rid = _mm_loadl_epi64((__m128i_u *)&idx[(good >> 24) & 0xFF]);
     d1 = _mm_shuffle_epi8(d0, rid);
     tmp1 = _mm256_cvtepu8_epi32(d1);
     tmp1 = _mm256_sub_epi32(off, tmp1);
-    _mm256_storeu_si256((__m256i *)&r[ctr], tmp1);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], tmp1);
     ctr += __builtin_popcount((good >> 24) & 0xFF);
   }
 
@@ -391,14 +386,14 @@ unsigned int rej_eta(uint32_t *r,
       r[ctr++] = Q + ETA - vec[1];
   }
 
-  DBENCH_STOP(*tsample);
   return ctr;
 }
 
-unsigned int rej_gamma1m1(uint32_t *r,
-                          unsigned int len,
-                          const unsigned char *buf,
-                          unsigned int buflen)
+unsigned int DILITHIUM_rej_gamma1m1(
+        uint32_t *r,
+        unsigned int len,
+        const unsigned char *buf,
+        unsigned int buflen)
 {
   unsigned int i, ctr, pos;
   uint32_t vec[8];
@@ -406,7 +401,6 @@ unsigned int rej_gamma1m1(uint32_t *r,
   uint32_t good;
   const __m256i bound = _mm256_set1_epi32(2*GAMMA1 - 1);
   const __m256i off = _mm256_set1_epi32(Q + GAMMA1 - 1);
-  DBENCH_START();
 
   ctr = pos = 0;
   while(ctr + 8 <= len && pos + 20 <= buflen) {
@@ -423,15 +417,15 @@ unsigned int rej_gamma1m1(uint32_t *r,
       pos += 5;
     }
 
-    d = _mm256_loadu_si256((__m256i *)vec);
+    d = _mm256_loadu_si256((__m256i_u *)vec);
     tmp = _mm256_cmpgt_epi32(bound, d);
     good = _mm256_movemask_ps((__m256)tmp);
     d = _mm256_sub_epi32(off, d);
 
-    __m128i rid = _mm_loadl_epi64((__m128i *)&idx[good]);
+    __m128i rid = _mm_loadl_epi64((__m128i_u *)&idx[good]);
     tmp = _mm256_cvtepu8_epi32(rid);
     d = _mm256_permutevar8x32_epi32(d, tmp);
-    _mm256_storeu_si256((__m256i *)&r[ctr], d);
+    _mm256_storeu_si256((__m256i_u *)&r[ctr], d);
     ctr += __builtin_popcount(good);
   }
 
@@ -453,6 +447,5 @@ unsigned int rej_gamma1m1(uint32_t *r,
       r[ctr++] = Q + GAMMA1 - 1 - vec[1];
   }
 
-  DBENCH_STOP(*tsample);
   return ctr;
 }

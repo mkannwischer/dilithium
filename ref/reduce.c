@@ -1,9 +1,10 @@
 #include <stdint.h>
+
 #include "params.h"
 #include "reduce.h"
 
 /*************************************************
-* Name:        montgomery_reduce
+* Name:        DILITHIUM_montgomery_reduce
 *
 * Description: For finite field element a with 0 <= a <= Q*2^32,
 *              compute r \equiv a*2^{-32} (mod Q) such that 0 <= r < 2*Q.
@@ -12,7 +13,7 @@
 *
 * Returns r.
 **************************************************/
-uint32_t montgomery_reduce(uint64_t a) {
+uint32_t DILITHIUM_montgomery_reduce(uint64_t a) {
   uint64_t t;
 
   t = a * QINV;
@@ -20,11 +21,11 @@ uint32_t montgomery_reduce(uint64_t a) {
   t *= Q;
   t = a + t;
   t >>= 32;
-  return t;
+  return (uint32_t)t;
 }
 
 /*************************************************
-* Name:        reduce32
+* Name:        DILITHIUM_reduce32
 *
 * Description: For finite field element a, compute r \equiv a (mod Q)
 *              such that 0 <= r < 2*Q.
@@ -33,7 +34,7 @@ uint32_t montgomery_reduce(uint64_t a) {
 *
 * Returns r.
 **************************************************/
-uint32_t reduce32(uint32_t a) {
+uint32_t DILITHIUM_reduce32(uint32_t a) {
   uint32_t t;
 
   t = a & 0x7FFFFF;
@@ -43,7 +44,7 @@ uint32_t reduce32(uint32_t a) {
 }
 
 /*************************************************
-* Name:        csubq
+* Name:        DILITHIUM_csubq
 *
 * Description: Subtract Q if input coefficient is bigger than Q.
 *
@@ -51,14 +52,14 @@ uint32_t reduce32(uint32_t a) {
 *
 * Returns r.
 **************************************************/
-uint32_t csubq(uint32_t a) {
+uint32_t DILITHIUM_csubq(uint32_t a) {
   a -= Q;
   a += ((int32_t)a >> 31) & Q;
   return a;
 }
 
 /*************************************************
-* Name:        freeze
+* Name:        DILITHIUM_freeze
 *
 * Description: For finite field element a, compute standard
 *              representative r = a mod Q.
@@ -67,8 +68,8 @@ uint32_t csubq(uint32_t a) {
 *
 * Returns r.
 **************************************************/
-uint32_t freeze(uint32_t a) {
-  a = reduce32(a);
-  a = csubq(a);
+uint32_t DILITHIUM_freeze(uint32_t a) {
+  a = DILITHIUM_reduce32(a);
+  a = DILITHIUM_csubq(a);
   return a;
 }

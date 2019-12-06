@@ -1,7 +1,7 @@
-.global reduce_avx
-reduce_avx:
+.global DILITHIUM_reduce_avx
+DILITHIUM_reduce_avx:
 #consts
-vmovdqa		_8x23ones(%rip),%ymm0
+vmovdqa		_DILITHIUM_8x23ones(%rip),%ymm0
 
 xor		%eax,%eax
 _looptop_rdc32:
@@ -46,10 +46,10 @@ jb _looptop_rdc32
 
 ret
 
-.global csubq_avx
-csubq_avx:
+.global DILITHIUM_csubq_avx
+DILITHIUM_csubq_avx:
 #consts
-vmovdqa		_8xq(%rip),%ymm0
+vmovdqa		_DILITHIUM_8xq(%rip),%ymm0
 
 xor		%eax,%eax
 _looptop_csubq:
@@ -59,7 +59,7 @@ vmovdqa		32(%rdi),%ymm3
 vmovdqa		64(%rdi),%ymm5
 vmovdqa		96(%rdi),%ymm7
 
-#csubq
+#DILITHIUM_csubq
 vpsubd		%ymm0,%ymm1,%ymm1
 vpsubd		%ymm0,%ymm3,%ymm3
 vpsubd		%ymm0,%ymm5,%ymm5

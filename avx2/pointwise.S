@@ -1,10 +1,10 @@
 #include "params.h"
 
-.global pointwise_avx
-pointwise_avx:
+.global DILITHIUM_pointwise_avx
+DILITHIUM_pointwise_avx:
 #consts
-vmovdqa		_8xqinv(%rip),%ymm0
-vmovdqa		_8xq(%rip),%ymm1
+vmovdqa		_DILITHIUM_8xqinv(%rip),%ymm0
+vmovdqa		_DILITHIUM_8xq(%rip),%ymm1
 
 xor		%eax,%eax
 _looptop1:
@@ -132,11 +132,11 @@ vpaddq		%ymm8,%ymm4,%ymm4
 vpaddq		%ymm9,%ymm5,%ymm5
 .endm
 
-.global pointwise_acc_avx
-pointwise_acc_avx:
+.global DILITHIUM_pointwise_acc_avx
+DILITHIUM_pointwise_acc_avx:
 #consts
-vmovdqa		_8xqinv(%rip),%ymm0
-vmovdqa		_8xq(%rip),%ymm1
+vmovdqa		_DILITHIUM_8xqinv(%rip),%ymm0
+vmovdqa		_DILITHIUM_8xq(%rip),%ymm1
 
 xor		%eax,%eax
 _looptop2:
