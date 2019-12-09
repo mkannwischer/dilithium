@@ -1,9 +1,9 @@
 #include <stdint.h>
 
-#include "ntt.h"
 #include "params.h"
-#include "poly.h"
 #include "reduce.h"
+#include "ntt.h"
+#include "poly.h"
 
 /* Roots of unity in order needed by forward DILITHIUM_ntt */
 static const uint32_t DILITHIUM_zetas[N] = {
@@ -88,12 +88,12 @@ static const uint32_t DILITHIUM_zetas_inv[N] = {
 * Arguments:   - uint32_t p[N]: input/output coefficient array
 **************************************************/
 void DILITHIUM_ntt(uint32_t *p) {
-  unsigned int len, start, j, k;
+  size_t k, j;
   uint32_t zeta, t;
 
   k = 1;
-  for(len = 128; len > 0; len >>= 1) {
-    for(start = 0; start < N; start = j + len) {
+  for(size_t len = 128; len > 0; len >>= 1) {
+    for(size_t start = 0; start < N; start = j + len) {
       zeta = DILITHIUM_zetas[k++];
       for(j = start; j < start + len; ++j) {
         t = DILITHIUM_montgomery_reduce((uint64_t) zeta * p[j + len]);
@@ -115,7 +115,7 @@ void DILITHIUM_ntt(uint32_t *p) {
 * Arguments:   - uint32_t p[N]: input/output coefficient array
 **************************************************/
 void DILITHIUM_invntt_frominvmont(uint32_t *p) {
-  unsigned int start, len, j, k;
+  size_t start, len, j, k;
   uint32_t t, zeta;
   const uint32_t f = (((uint64_t)MONT*MONT % Q) * (Q-1) % Q) * ((Q-1) >> 8) % Q;
 

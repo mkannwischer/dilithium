@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #include "ntt.h"
 #include "params.h"
 #include "poly.h"
@@ -181,8 +179,8 @@ void DILITHIUM_poly_decompose(poly *a1, poly *a0, const poly *a) {
 *
 * Returns number of 1 bits.
 **************************************************/
-unsigned int DILITHIUM_poly_make_hint(poly *h, const poly *a0, const poly *a1) {
-    unsigned int s = 0;
+uint32_t DILITHIUM_poly_make_hint(poly *h, const poly *a0, const poly *a1) {
+    uint32_t s = 0;
     for (size_t i = 0; i < N; ++i) {
         h->coeffs[i] = DILITHIUM_make_hint(a0->coeffs[i], a1->coeffs[i]);
         s += h->coeffs[i];
@@ -200,8 +198,9 @@ unsigned int DILITHIUM_poly_make_hint(poly *h, const poly *a0, const poly *a1) {
 *              - const poly *h: pointer to input hint polynomial
 **************************************************/
 void DILITHIUM_poly_use_hint(poly *a, const poly *b, const poly *h) {
-    for (size_t i = 0; i < N; ++i)
-        a->coeffs[i] = DILITHIUM_use_hint(b->coeffs[i], h->coeffs[i]);
+    for (size_t i = 0; i < N; ++i) {
+        a->coeffs[i] = (uint32_t)DILITHIUM_use_hint(b->coeffs[i], h->coeffs[i]);
+    }
 }
 
 /*************************************************
@@ -240,18 +239,19 @@ int DILITHIUM_poly_chknorm(const poly *a, uint32_t B) {
 *              performing rejection sampling using array of random bytes.
 *
 * Arguments:   - uint32_t *a: pointer to output array (allocated)
-*              - unsigned int len: number of coefficients to be sampled
+*              - size_t len: number of coefficients to be sampled
 *              - const uint8_t *buf: array of random bytes
-*              - unsigned int buflen: length of array of random bytes
+*              - size_t buflen: length of array of random bytes
 *
 * Returns number of sampled coefficients. Can be smaller than len if not enough
 * random bytes were given.
 **************************************************/
-static unsigned int rej_uniform(uint32_t *a,
-                                          unsigned int len,
-                                          const uint8_t *buf,
-                                          size_t buflen) {
-    unsigned int ctr, pos;
+static size_t rej_uniform(
+        uint32_t *a,
+        size_t len,
+        const uint8_t *buf,
+        size_t buflen) {
+    size_t ctr, pos;
     uint32_t t;
 
     ctr = pos = 0;
@@ -285,11 +285,10 @@ static unsigned int rej_uniform(uint32_t *a,
 void DILITHIUM_poly_uniform(poly *a,
                             const uint8_t seed[SEEDBYTES],
                             uint16_t nonce) {
-    unsigned int i, ctr;
+    size_t ctr, off;
     size_t buflen = POLY_UNIFORM_BUFLEN;
     uint8_t buf[POLY_UNIFORM_BUFLEN + 2];
     stream128_state state;
-    size_t off;
 
     stream128_init(&state, seed, nonce);
     stream128_squeezeblocks(buf, POLY_UNIFORM_NBLOCKS, &state);
@@ -298,7 +297,7 @@ void DILITHIUM_poly_uniform(poly *a,
 
     while (ctr < N) {
         off = buflen % 3;
-        for (i = 0; i < off; ++i)
+        for (size_t i = 0; i < off; ++i)
             buf[i] = buf[buflen - off + i];
 
         buflen = STREAM128_BLOCKBYTES + off;
@@ -314,18 +313,19 @@ void DILITHIUM_poly_uniform(poly *a,
 *              performing rejection sampling using array of random bytes.
 *
 * Arguments:   - uint32_t *a: pointer to output array (allocated)
-*              - unsigned int len: number of coefficients to be sampled
+*              - size_t len: number of coefficients to be sampled
 *              - const uint8_t *buf: array of random bytes
-*              - unsigned int buflen: length of array of random bytes
+*              - size_t buflen: length of array of random bytes
 *
 * Returns number of sampled coefficients. Can be smaller than len if not enough
 * random bytes were given.
 **************************************************/
-static unsigned int rej_eta(uint32_t *a,
-                                      unsigned int len,
-                                      const uint8_t *buf,
-                                      unsigned int buflen) {
-    unsigned int ctr, pos;
+static size_t rej_eta(
+        uint32_t *a,
+        size_t len,
+        const uint8_t *buf,
+        size_t buflen) {
+    size_t ctr, pos;
     uint32_t t0, t1;
 
     ctr = pos = 0;
@@ -364,7 +364,7 @@ static unsigned int rej_eta(uint32_t *a,
 void DILITHIUM_poly_uniform_eta(poly *a,
                                 const uint8_t *seed,
                                 uint16_t nonce) {
-    unsigned int ctr;
+    size_t ctr;
     uint8_t buf[POLY_UNIFORM_ETA_BUFLEN];
     stream128_state state;
 
@@ -387,18 +387,20 @@ void DILITHIUM_poly_uniform_eta(poly *a,
 *              using array of random bytes.
 *
 * Arguments:   - uint32_t *a: pointer to output array (allocated)
-*              - unsigned int len: number of coefficients to be sampled
+*              - size_t len: number of coefficients to be sampled
 *              - const uint8_t *buf: array of random bytes
-*              - unsigned int buflen: length of array of random bytes
+*              - size_t buflen: length of array of random bytes
 *
 * Returns number of sampled coefficients. Can be smaller than len if not enough
 * random bytes were given.
 **************************************************/
-static unsigned int rej_gamma1m1(uint32_t *a,
-                                           unsigned int len,
-                                           const uint8_t *buf,
-                                           unsigned int buflen) {
-    unsigned int ctr, pos;
+static size_t rej_gamma1m1(
+        uint32_t *a,
+        size_t len,
+        const uint8_t *buf,
+        size_t buflen) {
+
+    size_t ctr, pos;
     uint32_t t0, t1;
 
     ctr = pos = 0;
@@ -440,8 +442,8 @@ static unsigned int rej_gamma1m1(uint32_t *a,
 void DILITHIUM_poly_uniform_gamma1m1(poly *a,
                                      const uint8_t seed[CRHBYTES],
                                      uint16_t nonce) {
-    unsigned int i, ctr, off;
-    unsigned int buflen = POLY_UNIFORM_GAMMA1M1_BUFLEN;
+    size_t ctr, off;
+    size_t buflen = POLY_UNIFORM_GAMMA1M1_BUFLEN;
     uint8_t buf[POLY_UNIFORM_GAMMA1M1_BUFLEN + 4];
     stream256_state state;
 
@@ -452,7 +454,7 @@ void DILITHIUM_poly_uniform_gamma1m1(poly *a,
 
     while (ctr < N) {
         off = buflen % 5;
-        for (i = 0; i < off; ++i)
+        for (size_t i = 0; i < off; ++i)
             buf[i] = buf[buflen - off + i];
 
         buflen = STREAM256_BLOCKBYTES + off;
@@ -472,11 +474,10 @@ void DILITHIUM_poly_uniform_gamma1m1(poly *a,
 *              - const poly *a: pointer to input polynomial
 **************************************************/
 void DILITHIUM_polyeta_pack(uint8_t *r, const poly *a) {
-    unsigned int i;
     uint8_t t[8];
 
 #if 2 * ETA <= 7
-    for(i = 0; i < N/8; ++i) {
+    for(size_t i = 0; i < N/8; ++i) {
       t[0] = (uint8_t)(Q + ETA - a->coeffs[8*i+0]);
       t[1] = (uint8_t)(Q + ETA - a->coeffs[8*i+1]);
       t[2] = (uint8_t)(Q + ETA - a->coeffs[8*i+2]);
@@ -491,7 +492,7 @@ void DILITHIUM_polyeta_pack(uint8_t *r, const poly *a) {
       r[3*i+2]  = (uint8_t)((t[5] >> 1) | (t[6] << 2) | (t[7] << 5));
     }
 #else
-    for (i = 0; i < N / 2; ++i) {
+    for (size_t i = 0; i < N / 2; ++i) {
         t[0] = (uint8_t)(Q + ETA - a->coeffs[2 * i + 0]);
         t[1] = (uint8_t)(Q + ETA - a->coeffs[2 * i + 1]);
         r[i] = (uint8_t)(t[0] | (t[1] << 4));
@@ -509,10 +510,8 @@ void DILITHIUM_polyeta_pack(uint8_t *r, const poly *a) {
 *              - const uint8_t *a: byte array with bit-packed polynomial
 **************************************************/
 void DILITHIUM_polyeta_unpack(poly *r, const uint8_t *a) {
-    unsigned int i;
-
 #if 2 * ETA <= 7
-    for(i = 0; i < N/8; ++i) {
+    for(size_t i = 0; i < N/8; ++i) {
       r->coeffs[8*i+0] = a[3*i+0] & 0x07;
       r->coeffs[8*i+1] = (a[3*i+0] >> 3) & 0x07;
       r->coeffs[8*i+2] = (uint32_t)((a[3*i+0] >> 6) | (a[3*i+1] << 2)) & 0x07;
@@ -532,7 +531,7 @@ void DILITHIUM_polyeta_unpack(poly *r, const uint8_t *a) {
       r->coeffs[8*i+7] = Q + ETA - r->coeffs[8*i+7];
     }
 #else
-    for (i = 0; i < N / 2; ++i) {
+    for (size_t i = 0; i < N / 2; ++i) {
         r->coeffs[2 * i + 0] = a[i] & 0x0F;
         r->coeffs[2 * i + 1] = a[i] >> 4;
         r->coeffs[2 * i + 0] = Q + ETA - r->coeffs[2 * i + 0];
@@ -556,9 +555,8 @@ void DILITHIUM_polyt1_pack(uint8_t *r, const poly *a) {
 #if D != 14
 #error "DILITHIUM_polyt1_pack() assumes D == 14"
 #endif
-    unsigned int i;
 
-    for (i = 0; i < N / 8; ++i) {
+    for (size_t i = 0; i < N / 8; ++i) {
         r[9 * i + 0] = (uint8_t)((a->coeffs[8 * i + 0] >> 0));
         r[9 * i + 1] = (uint8_t)((a->coeffs[8 * i + 0] >> 8) | (a->coeffs[8 * i + 1] << 1));
         r[9 * i + 2] = (uint8_t)((a->coeffs[8 * i + 1] >> 7) | (a->coeffs[8 * i + 2] << 2));

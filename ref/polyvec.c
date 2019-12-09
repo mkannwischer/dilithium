@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include "params.h"
@@ -17,9 +18,7 @@
 * Arguments:   - polyvecl *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyvecl_freeze(polyvecl *v) {
-  unsigned int i;
-
-  for(i = 0; i < L; ++i)
+  for(size_t i = 0; i < L; ++i)
       DILITHIUM_poly_freeze(&v->vec[i]);
 }
 
@@ -33,10 +32,9 @@ void DILITHIUM_polyvecl_freeze(polyvecl *v) {
 *              - const polyvecl *u: pointer to first summand
 *              - const polyvecl *v: pointer to second summand
 **************************************************/
-void DILITHIUM_polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
-  unsigned int i;
-
-  for(i = 0; i < L; ++i)
+void DILITHIUM_polyvecl_add(
+        polyvecl *w, const polyvecl *u, const polyvecl *v) {
+  for (size_t i = 0; i < L; ++i)
       DILITHIUM_poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
 }
 
@@ -49,10 +47,9 @@ void DILITHIUM_polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
 * Arguments:   - polyvecl *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyvecl_ntt(polyvecl *v) {
-  unsigned int i;
-
-  for(i = 0; i < L; ++i)
+  for(size_t i = 0; i < L; ++i) {
       DILITHIUM_poly_ntt(&v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -68,16 +65,14 @@ void DILITHIUM_polyvecl_ntt(polyvecl *v) {
 *              - const polyvecl *u: pointer to first input vector
 *              - const polyvecl *v: pointer to second input vector
 **************************************************/
-void DILITHIUM_polyvecl_pointwise_acc_invmontgomery(poly *w,
-                                                    const polyvecl *u,
-                                                    const polyvecl *v)
+void DILITHIUM_polyvecl_pointwise_acc_invmontgomery(
+        poly *w, const polyvecl *u, const polyvecl *v)
 {
-  unsigned int i;
   poly t;
 
   DILITHIUM_poly_pointwise_invmontgomery(w, &u->vec[0], &v->vec[0]);
 
-  for(i = 1; i < L; ++i) {
+  for(size_t i = 1; i < L; ++i) {
     DILITHIUM_poly_pointwise_invmontgomery(&t, &u->vec[i], &v->vec[i]);
       DILITHIUM_poly_add(w, w, &t);
   }
@@ -96,11 +91,11 @@ void DILITHIUM_polyvecl_pointwise_acc_invmontgomery(poly *w,
 * otherwise.
 **************************************************/
 int DILITHIUM_polyvecl_chknorm(const polyvecl *v, uint32_t B)  {
-  unsigned int i;
-
-  for(i = 0; i < L; ++i)
-    if(DILITHIUM_poly_chknorm(&v->vec[i], B))
+  for (size_t i = 0; i < L; ++i) {
+    if(DILITHIUM_poly_chknorm(&v->vec[i], B)) {
       return 1;
+    }
+  }
 
   return 0;
 }
@@ -119,9 +114,7 @@ int DILITHIUM_polyvecl_chknorm(const polyvecl *v, uint32_t B)  {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_reduce(polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+  for (size_t i = 0; i < K; ++i)
       DILITHIUM_poly_reduce(&v->vec[i]);
 }
 
@@ -134,10 +127,9 @@ void DILITHIUM_polyveck_reduce(polyveck *v) {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_csubq(polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+  for (size_t i = 0; i < K; ++i) {
       DILITHIUM_poly_csubq(&v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -149,10 +141,9 @@ void DILITHIUM_polyveck_csubq(polyveck *v) {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_freeze(polyveck *v)  {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+  for (size_t i = 0; i < K; ++i) {
       DILITHIUM_poly_freeze(&v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -165,11 +156,11 @@ void DILITHIUM_polyveck_freeze(polyveck *v)  {
 *              - const polyveck *u: pointer to first summand
 *              - const polyveck *v: pointer to second summand
 **************************************************/
-void DILITHIUM_polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+void DILITHIUM_polyveck_add(
+        polyveck *w, const polyveck *u, const polyveck *v) {
+  for (size_t i = 0; i < K; ++i) {
       DILITHIUM_poly_add(&w->vec[i], &u->vec[i], &v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -184,11 +175,11 @@ void DILITHIUM_polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
 *              - const polyveck *v: pointer to second input vector to be
 *                                   subtracted from first input vector
 **************************************************/
-void DILITHIUM_polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
-      DILITHIUM_poly_sub(&w->vec[i], &u->vec[i], &v->vec[i]);
+void DILITHIUM_polyveck_sub(
+        polyveck *w, const polyveck *u, const polyveck *v) {
+  for(size_t i = 0; i < K; ++i) {
+    DILITHIUM_poly_sub(&w->vec[i], &u->vec[i], &v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -200,10 +191,9 @@ void DILITHIUM_polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_shiftl(polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
-      DILITHIUM_poly_shiftl(&v->vec[i]);
+  for (size_t i = 0; i < K; ++i) {
+    DILITHIUM_poly_shiftl(&v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -215,9 +205,7 @@ void DILITHIUM_polyveck_shiftl(polyveck *v) {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_ntt(polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+  for (size_t i = 0; i < K; ++i)
       DILITHIUM_poly_ntt(&v->vec[i]);
 }
 
@@ -231,10 +219,9 @@ void DILITHIUM_polyveck_ntt(polyveck *v) {
 * Arguments:   - polyveck *v: pointer to input/output vector
 **************************************************/
 void DILITHIUM_polyveck_invntt_montgomery(polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+  for (size_t i = 0; i < K; ++i) {
       DILITHIUM_poly_invntt_montgomery(&v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -250,11 +237,11 @@ void DILITHIUM_polyveck_invntt_montgomery(polyveck *v) {
 * otherwise.
 **************************************************/
 int DILITHIUM_polyveck_chknorm(const polyveck *v, uint32_t B) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
-    if(DILITHIUM_poly_chknorm(&v->vec[i], B))
+  for (size_t i = 0; i < K; ++i) {
+    if (DILITHIUM_poly_chknorm(&v->vec[i], B)) {
       return 1;
+    }
+  }
 
   return 0;
 }
@@ -273,11 +260,11 @@ int DILITHIUM_polyveck_chknorm(const polyveck *v, uint32_t B) {
 *                              coefficients Q + a0
 *              - const polyveck *v: pointer to input vector
 **************************************************/
-void DILITHIUM_polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
-      DILITHIUM_poly_power2round(&v1->vec[i], &v0->vec[i], &v->vec[i]);
+void DILITHIUM_polyveck_power2round(
+        polyveck *v1, polyveck *v0, const polyveck *v) {
+  for (size_t i = 0; i < K; ++i) {
+    DILITHIUM_poly_power2round(&v1->vec[i], &v0->vec[i], &v->vec[i]);
+  }
 }
 
 /*************************************************
@@ -295,10 +282,9 @@ void DILITHIUM_polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *
 *                              coefficients Q + a0
 *              - const polyveck *v: pointer to input vector
 **************************************************/
-void DILITHIUM_polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
+void DILITHIUM_polyveck_decompose(
+        polyveck *v1, polyveck *v0, const polyveck *v) {
+  for (size_t i = 0; i < K; ++i)
       DILITHIUM_poly_decompose(&v1->vec[i], &v0->vec[i], &v->vec[i]);
 }
 
@@ -313,14 +299,17 @@ void DILITHIUM_polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v)
 *
 * Returns number of 1 bits.
 **************************************************/
-unsigned int DILITHIUM_polyveck_make_hint(polyveck *h,
-                                          const polyveck *v0,
-                                          const polyveck *v1)
+uint32_t DILITHIUM_polyveck_make_hint(
+        polyveck *h,
+        const polyveck *v0,
+        const polyveck *v1)
 {
-  unsigned int i, s = 0;
+  uint32_t s = 0;
 
-  for(i = 0; i < K; ++i)
-    s += DILITHIUM_poly_make_hint(&h->vec[i], &v0->vec[i], &v1->vec[i]);
+  for (size_t i = 0; i < K; ++i) {
+    s += DILITHIUM_poly_make_hint(
+        &h->vec[i], &v0->vec[i], &v1->vec[i]);
+  }
 
   return s;
 }
@@ -335,9 +324,10 @@ unsigned int DILITHIUM_polyveck_make_hint(polyveck *h,
 *              - const polyveck *v: pointer to input vector
 *              - const polyveck *h: pointer to input hint vector
 **************************************************/
-void DILITHIUM_polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h) {
-  unsigned int i;
-
-  for(i = 0; i < K; ++i)
-      DILITHIUM_poly_use_hint(&w->vec[i], &v->vec[i], &h->vec[i]);
+void DILITHIUM_polyveck_use_hint(
+        polyveck *w, const polyveck *v, const polyveck *h) {
+  for (size_t i = 0; i < K; ++i) {
+      DILITHIUM_poly_use_hint(
+          &w->vec[i], &v->vec[i], &h->vec[i]);
+  }
 }

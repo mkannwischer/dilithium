@@ -21,11 +21,11 @@
 *              - const uint8_t rho[]: byte array containing seed rho
 **************************************************/
 void DILITHIUM_expand_mat(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
-    unsigned int i, j;
-
-    for (i = 0; i < K; ++i)
-        for (j = 0; j < L; ++j)
+    for (size_t i = 0; i < K; ++i) {
+        for (size_t j = 0; j < L; ++j) {
             DILITHIUM_poly_uniform(&mat[i].vec[j], rho, (uint16_t)((i << 8) + j));
+        }
+    }
 }
 
 /*************************************************
@@ -42,30 +42,33 @@ void DILITHIUM_expand_mat(polyvecl mat[K], const uint8_t rho[SEEDBYTES]) {
 void DILITHIUM_challenge(poly *c,
                          const uint8_t mu[CRHBYTES],
                          const polyveck *w1) {
-    unsigned int i, b, pos;
     uint64_t signs;
     uint8_t inbuf[CRHBYTES + K * POLW1_SIZE_PACKED];
     uint8_t outbuf[SHAKE256_RATE];
     shake256ctx state;
+    uint8_t b;
+    size_t pos;
 
-    for (i = 0; i < CRHBYTES; ++i)
+    for (size_t i = 0; i < CRHBYTES; ++i) {
         inbuf[i] = mu[i];
-    for (i = 0; i < K; ++i)
+    }
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_polyw1_pack(inbuf + CRHBYTES + i * POLW1_SIZE_PACKED, &w1->vec[i]);
+    }
 
     shake256_absorb(&state, inbuf, sizeof(inbuf));
     shake256_squeezeblocks(outbuf, 1, &state);
 
     signs = 0;
-    for (i = 0; i < 8; ++i)
+    for (size_t i = 0; i < 8; ++i)
         signs |= (uint64_t)outbuf[i] << 8 * i;
 
     pos = 8;
 
-    for (i = 0; i < N; ++i)
+    for (size_t i = 0; i < N; ++i)
         c->coeffs[i] = 0;
 
-    for (i = 196; i < 256; ++i) {
+    for (size_t i = 196; i < 256; ++i) {
         do {
             if (pos >= SHAKE256_RATE) {
                 shake256_squeezeblocks(outbuf, 1, &state);
@@ -95,7 +98,6 @@ void DILITHIUM_challenge(poly *c,
 * Returns 0 (success)
 **************************************************/
 int DILITHIUM_crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
-    unsigned int i;
     uint8_t seedbuf[3 * SEEDBYTES];
     uint8_t tr[CRHBYTES];
     const uint8_t *rho, *rhoprime, *key;
@@ -114,15 +116,15 @@ int DILITHIUM_crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
     DILITHIUM_expand_mat(mat, rho);
 
     /* Sample short vectors s1 and s2 */
-    for (i = 0; i < L; ++i)
+    for (size_t i = 0; i < L; ++i)
         DILITHIUM_poly_uniform_eta(&s1.vec[i], rhoprime, nonce++);
-    for (i = 0; i < K; ++i)
+    for (size_t i = 0; i < K; ++i)
         DILITHIUM_poly_uniform_eta(&s2.vec[i], rhoprime, nonce++);
 
     /* Matrix-vector multiplication */
     s1hat = s1;
     DILITHIUM_polyvecl_ntt(&s1hat);
-    for (i = 0; i < K; ++i) {
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_polyvecl_pointwise_acc_invmontgomery(&t.vec[i], &mat[i], &s1hat);
         DILITHIUM_poly_reduce(&t.vec[i]);
         DILITHIUM_poly_invntt_montgomery(&t.vec[i]);
@@ -162,10 +164,9 @@ int DILITHIUM_crypto_sign_signature(
         uint8_t *sig, size_t *siglen,
         const uint8_t *msg, size_t mlen,
         const uint8_t *sk) {
-    unsigned long long i;
-    unsigned int n;
     uint8_t seedbuf[2 * SEEDBYTES + 3 * CRHBYTES];
     uint8_t *rho, *tr, *key, *mu, *rhoprime;
+    uint32_t n;
     uint16_t nonce = 0;
     poly c, chat;
     polyvecl mat[K], s1, y, yhat, z;
@@ -198,14 +199,14 @@ int DILITHIUM_crypto_sign_signature(
 
 rej:
     /* Sample intermediate vector y */
-    for (i = 0; i < L; ++i) {
+    for (size_t i = 0; i < L; ++i) {
         DILITHIUM_poly_uniform_gamma1m1(&y.vec[i], rhoprime, nonce++);
     }
 
     /* Matrix-vector multiplication */
     yhat = y;
     DILITHIUM_polyvecl_ntt(&yhat);
-    for (i = 0; i < K; ++i) {
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_polyvecl_pointwise_acc_invmontgomery(&w.vec[i], &mat[i], &yhat);
         DILITHIUM_poly_reduce(&w.vec[i]);
         DILITHIUM_poly_invntt_montgomery(&w.vec[i]);
@@ -220,7 +221,7 @@ rej:
 
     /* Check that subtracting cs2 does not change high bits of w and low bits
      * do not reveal secret information */
-    for (i = 0; i < K; ++i) {
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_poly_pointwise_invmontgomery(&cs2.vec[i], &chat, &s2.vec[i]);
         DILITHIUM_poly_invntt_montgomery(&cs2.vec[i]);
     }
@@ -231,7 +232,7 @@ rej:
     }
 
     /* Compute z, reject if it reveals secret */
-    for (i = 0; i < L; ++i) {
+    for (size_t i = 0; i < L; ++i) {
         DILITHIUM_poly_pointwise_invmontgomery(&z.vec[i], &chat, &s1.vec[i]);
         DILITHIUM_poly_invntt_montgomery(&z.vec[i]);
     }
@@ -242,7 +243,7 @@ rej:
     }
 
     /* Compute hints for w1 */
-    for (i = 0; i < K; ++i) {
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_poly_pointwise_invmontgomery(&ct0.vec[i], &chat, &t0.vec[i]);
         DILITHIUM_poly_invntt_montgomery(&ct0.vec[i]);
     }
@@ -273,10 +274,10 @@ rej:
 * Arguments:   - uint8_t *sm: pointer to output signed message (allocated
 *                             array with DILITHIUM_CRYPTO_BYTES + mlen bytes),
 *                             can be equal to m
-*              - unsigned long long *smlen: pointer to output length of signed
+*              - size_t *smlen: pointer to output length of signed
 *                                           message
 *              - const uint8_t *m: pointer to message to be signed
-*              - unsigned long long mlen: length of message
+*              - size_t mlen: length of message
 *              - const uint8_t *sk: pointer to bit-packed secret key
 *
 * Returns 0 (success)
@@ -309,9 +310,8 @@ int DILITHIUM_crypto_sign(
 int DILITHIUM_crypto_sign_verify(
     const uint8_t *sig, size_t siglen,
     const uint8_t *m, size_t mlen, const uint8_t *pk) {
-    unsigned long long i;
-    unsigned char rho[SEEDBYTES];
-    unsigned char mu[CRHBYTES];
+    uint8_t rho[SEEDBYTES];
+    uint8_t mu[CRHBYTES];
     poly c, chat, cp;
     polyvecl mat[K], z;
     polyveck t1, w1, h, tmp1, tmp2;
@@ -342,7 +342,7 @@ int DILITHIUM_crypto_sign_verify(
     DILITHIUM_expand_mat(mat, rho);
 
     DILITHIUM_polyvecl_ntt(&z);
-    for (i = 0; i < K ; ++i) {
+    for (size_t i = 0; i < K ; ++i) {
         DILITHIUM_polyvecl_pointwise_acc_invmontgomery(&tmp1.vec[i], &mat[i], &z);
     }
 
@@ -350,7 +350,7 @@ int DILITHIUM_crypto_sign_verify(
     DILITHIUM_poly_ntt(&chat);
     DILITHIUM_polyveck_shiftl(&t1);
     DILITHIUM_polyveck_ntt(&t1);
-    for (i = 0; i < K; ++i) {
+    for (size_t i = 0; i < K; ++i) {
         DILITHIUM_poly_pointwise_invmontgomery(&tmp2.vec[i], &chat, &t1.vec[i]);
     }
 
@@ -364,7 +364,7 @@ int DILITHIUM_crypto_sign_verify(
 
     /* Call random oracle and verify challenge */
     DILITHIUM_challenge(&cp, mu, &w1);
-    for (i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
         if (c.coeffs[i] != cp.coeffs[i]) {
             return -1;
         }
@@ -379,12 +379,12 @@ int DILITHIUM_crypto_sign_verify(
 *
 * Description: Verify signed message.
 *
-* Arguments:   - unsigned char *m: pointer to output message (allocated
+* Arguments:   - uint8_t *m: pointer to output message (allocated
 *                                  array with smlen bytes), can be equal to sm
-*              - unsigned long long *mlen: pointer to output length of message
-*              - const unsigned char *sm: pointer to signed message
-*              - unsigned long long smlen: length of signed message
-*              - const unsigned char *pk: pointer to bit-packed public key
+*              - size_t *mlen: pointer to output length of message
+*              - const uint8_t *sm: pointer to signed message
+*              - size_t smlen: length of signed message
+*              - const uint8_t *pk: pointer to bit-packed public key
 *
 * Returns 0 if signed message could be verified correctly and -1 otherwise
 **************************************************/
@@ -392,7 +392,6 @@ int DILITHIUM_crypto_sign_open(
         uint8_t *m, size_t *mlen,
         const uint8_t *sm, size_t smlen,
         const uint8_t *pk) {
-    size_t i;
     if (smlen < DILITHIUM_CRYPTO_BYTES) {
         goto badsig;
     }
@@ -403,7 +402,7 @@ int DILITHIUM_crypto_sign_open(
         goto badsig;
     } else {
         /* All good, copy msg, return 0 */
-        for (i = 0; i < *mlen; ++i) {
+        for (size_t i = 0; i < *mlen; ++i) {
             m[i] = sm[DILITHIUM_CRYPTO_BYTES + i];
         }
         return 0;
@@ -412,7 +411,7 @@ int DILITHIUM_crypto_sign_open(
     /* Signature verification failed */
 badsig:
     *mlen = (size_t) -1;
-    for (i = 0; i < smlen; ++i) {
+    for (size_t i = 0; i < smlen; ++i) {
         m[i] = 0;
     }
 
