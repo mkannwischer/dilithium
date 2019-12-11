@@ -1,10 +1,11 @@
 #include "params.h"
+#include "cdecl.inc"
 
-.global DILITHIUM_pointwise_avx
-DILITHIUM_pointwise_avx:
+.global cdecl(DILITHIUM_pointwise_avx)
+cdecl(DILITHIUM_pointwise_avx):
 #consts
-vmovdqa		_DILITHIUM_8xqinv(%rip),%ymm0
-vmovdqa		_DILITHIUM_8xq(%rip),%ymm1
+vmovdqa		cdecl(_DILITHIUM_8xqinv)(%rip),%ymm0
+vmovdqa		cdecl(_DILITHIUM_8xq)(%rip),%ymm1
 
 xor		%eax,%eax
 _looptop1:
@@ -132,11 +133,11 @@ vpaddq		%ymm8,%ymm4,%ymm4
 vpaddq		%ymm9,%ymm5,%ymm5
 .endm
 
-.global DILITHIUM_pointwise_acc_avx
-DILITHIUM_pointwise_acc_avx:
+.global cdecl(DILITHIUM_pointwise_acc_avx)
+cdecl(DILITHIUM_pointwise_acc_avx):
 #consts
-vmovdqa		_DILITHIUM_8xqinv(%rip),%ymm0
-vmovdqa		_DILITHIUM_8xq(%rip),%ymm1
+vmovdqa		cdecl(_DILITHIUM_8xqinv)(%rip),%ymm0
+vmovdqa		cdecl(_DILITHIUM_8xq)(%rip),%ymm1
 
 xor		%eax,%eax
 _looptop2:
