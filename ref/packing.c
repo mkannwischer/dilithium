@@ -149,7 +149,7 @@ void DILITHIUM_unpack_sk(
 * Arguments:   - uint8_t sig[]: output byte array
 *              - const polyvecl *z: pointer to vector z
 *              - const polyveck *h: pointer to hint vector h
-*              - const poly *c: pointer to DILITHIUM_challenge polynomial
+*              - const poly *c: pointer to challenge polynomial
 **************************************************/
 void DILITHIUM_pack_sig(
         uint8_t *sig,
@@ -203,7 +203,7 @@ void DILITHIUM_pack_sig(
 *
 * Arguments:   - polyvecl *z: pointer to output vector z
 *              - polyveck *h: pointer to output hint vector h
-*              - poly *c: pointer to output DILITHIUM_challenge polynomial
+*              - poly *c: pointer to output challenge polynomial
 *              - const uint8_t sig[]: byte array containing
 *                bit-packed signature
 *

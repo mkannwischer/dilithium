@@ -87,7 +87,7 @@ static const uint32_t DILITHIUM_zetas_inv[N] = {
 *
 * Arguments:   - uint32_t p[N]: input/output coefficient array
 **************************************************/
-void DILITHIUM_ntt(uint32_t *p) {
+void DILITHIUM_ntt(uint32_t p[N]) {
   size_t k, j;
   uint32_t zeta, t;
 
@@ -114,7 +114,7 @@ void DILITHIUM_ntt(uint32_t *p) {
 *
 * Arguments:   - uint32_t p[N]: input/output coefficient array
 **************************************************/
-void DILITHIUM_invntt_frominvmont(uint32_t *p) {
+void DILITHIUM_invntt_frominvmont(uint32_t p[N]) {
   size_t start, len, j, k;
   uint32_t t, zeta;
   const uint32_t f = (((uint64_t)MONT*MONT % Q) * (Q-1) % Q) * ((Q-1) >> 8) % Q;
