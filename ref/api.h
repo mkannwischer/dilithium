@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef MODE
+#define MODE 3
+#endif
+
 #if MODE == 1
 #define DILITHIUM_CRYPTO_PUBLICKEYBYTES 896U
 #define DILITHIUM_CRYPTO_SECRETKEYBYTES 2096U
