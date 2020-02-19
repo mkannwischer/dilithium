@@ -353,6 +353,7 @@ void DILITHIUM_poly_uniform(poly *a,
     stream128_squeezeblocks(buf + off, 1, &state);
     ctr += rej_uniform_ref(a->coeffs + ctr, N - ctr, buf, buflen);
   }
+  stream128_ctx_release(&state);
 }
 
 #ifndef USE_AES
@@ -486,6 +487,7 @@ void DILITHIUM_poly_uniform_eta(
     stream128_squeezeblocks(buf, 1, &state);
     ctr += rej_eta_ref(a->coeffs + ctr, N - ctr, buf, STREAM128_BLOCKBYTES);
   }
+  stream128_ctx_release(&state);
 }
 
 #ifndef USE_AES
@@ -625,6 +627,7 @@ void DILITHIUM_poly_uniform_gamma1m1(
     stream256_squeezeblocks(buf + off, 1, &state);
     ctr += rej_gamma1m1_ref(a->coeffs + ctr, N - ctr, buf, buflen);
   }
+  stream256_ctx_release(&state);
 }
 
 #ifndef USE_AES

@@ -3,10 +3,9 @@ import os
 import fileinput
 import shutil
 import subprocess
-import glob
 from contextlib import suppress
 
-PQCLEAN_PATH = '../PQClean-dilithium/'
+PQCLEAN_PATH = '../PQClean/'
 
 files = {
     'ref': [
